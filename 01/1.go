@@ -35,12 +35,18 @@ func getLast(line string) int {
 	return getFirst(line)
 }
 
-func getFirstDigit(s string) int {
+func getDigit(s string) (first, last int) {
+	last = -1
+	first = -1
+
 	for i, char := range s {
 		// Check if the character is a spelled-out digit
 		if unicode.IsDigit(char) {
 			// Convert the spelled-out digit to its numerical value
-			return int(char - '0')
+			last = int(char - '0')
+			if first == -1 {
+				first = last
+			}
 		}
 
 		// Check if the substring starting from the current position matches any spelled-out digit word
@@ -58,19 +64,16 @@ func getFirstDigit(s string) int {
 
 		for word, value := range digitWord {
 			if i+len(word) <= len(s) && s[i:i+len(word)] == word {
-				return value
+				last = value
 			}
+		}
 
+		if first == -1 {
+			first = last
 		}
 	}
 
-	// Return -1 if no spelled-out digit is found
-	return -1
-}
-
-func getLastDigit(line string) int {
-	line = Reverse(line)
-	return getFirstDigit(line)
+	return first, last
 }
 
 func main() {
@@ -89,7 +92,10 @@ func main() {
 	// Iterate through each line
 	for scanner.Scan() {
 		line := scanner.Text()
-		sum += getFirst(line)*10 + getLast(line)
+
+		// fmt.Printf("-> 0:%d%d\n", getDigit(line))
+		i1, i2 := getDigit(line)
+		sum += i1*10 + i2
 	}
 
 	// Check for errors during scanning
@@ -98,5 +104,4 @@ func main() {
 	}
 
 	fmt.Printf("Sum: %d\n", sum)
-
 }
