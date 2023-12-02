@@ -8,10 +8,6 @@ import (
 	"strings"
 )
 
-const numRed = 12
-const numGreen = 13
-const numBlue = 14
-
 const RED = 0
 const GREEN = 1
 const BLUE = 2
@@ -20,10 +16,6 @@ func check(e error) {
 	if e != nil {
 		panic(e)
 	}
-}
-
-func getGameNumber(info string) (int, error) {
-	return strconv.Atoi(strings.Split(info, " ")[1])
 }
 
 func getCurrInfo(data string) (int, int) {
@@ -46,13 +38,11 @@ func getCurrInfo(data string) (int, int) {
 	return num, col
 }
 
-func checkPossibility(line string) int {
+func getPower(line string) int {
 	splitData := strings.Split(line, ": ")
-	gameInfo := splitData[0]
 	games := strings.Split(splitData[1], "; ")
 
-	gameNumber, err := getGameNumber(gameInfo)
-	check(err)
+	var min [3]int
 
 	for _, game := range games {
 		// fmt.Printf("gameData: %s\n", game)
@@ -60,32 +50,16 @@ func checkPossibility(line string) int {
 		for _, data := range gameData {
 			// fmt.Printf("\tdata: %s\n", data)
 			num, color := getCurrInfo(data)
-			switch color {
-			case RED:
-				if num > numRed {
-					// fmt.Printf("Game %d impossible: %s\n", gameNumber, splitData[1])
-					return 0
-				}
 
-			case BLUE:
-				if num > numBlue {
-					// fmt.Printf("Game %d impossible: %s\n", gameNumber, splitData[1])
-					return 0
-				}
-
-			case GREEN:
-				if num > numGreen {
-					// fmt.Printf("Game %d impossible: %s\n", gameNumber, splitData[1])
-					return 0
-				}
+			if num > min[color] {
+				min[color] = num
 			}
+
 		}
 		// fmt.Print("\n")
 	}
 
-	// fmt.Printf("Game %d possible: %s\n", gameNumber, splitData[1])
-
-	return gameNumber
+	return min[0] * min[1] * min[2]
 }
 
 func main() {
@@ -104,7 +78,7 @@ func main() {
 	// Iterate through each line
 	for scanner.Scan() {
 		line := scanner.Text()
-		sum += checkPossibility(line)
+		sum += getPower(line)
 	}
 
 	// Check for errors during scanning
