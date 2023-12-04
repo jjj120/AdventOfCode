@@ -3,7 +3,6 @@ package main
 import (
 	"bufio"
 	"fmt"
-	"math"
 	"os"
 	"regexp"
 	"strconv"
@@ -16,7 +15,9 @@ func check(e error) {
 	}
 }
 
-func handleLine(line string) int {
+const maxMatches = 10
+
+func countMatches(line string) int {
 	info := strings.Split(line, ": ")
 	numbers := strings.Split(info[1], " | ")
 	re := regexp.MustCompile("[0-9]+")
@@ -48,12 +49,28 @@ func handleLine(line string) int {
 			}
 		}
 	}
+	return matches
+}
 
-	if matches == 0 {
-		return 0
+func sumMatches(lines []string) int {
+	copies := make([]int, len(lines)+maxMatches)
+	for j := 0; j < len(copies); j++ {
+		copies[j] = 1
 	}
 
-	return int(math.Pow(2, float64(matches-1)))
+	for lineIndex, line := range lines {
+		matches := countMatches(line)
+		for i := lineIndex + 1; i < lineIndex+matches+1; i++ {
+			copies[i] += copies[lineIndex]
+		}
+	}
+
+	sum := 0
+	for i := 0; i < len(lines); i++ {
+		sum += copies[i]
+	}
+
+	return sum
 }
 
 func main() {
@@ -68,12 +85,15 @@ func main() {
 	// Create a scanner to read the file line by line
 	scanner := bufio.NewScanner(file)
 
-	var sum = 0
+	cards := make([]string, 0)
+
 	// Iterate through each line
 	for scanner.Scan() {
 		line := scanner.Text()
-		sum += handleLine(line)
+		cards = append(cards, line)
 	}
+
+	sum := sumMatches(cards)
 
 	// Check for errors during scanning
 	if err := scanner.Err(); err != nil {
