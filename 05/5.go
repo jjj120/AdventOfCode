@@ -138,18 +138,25 @@ func findLocation(seed int, maps []dataMap) int {
 func findClosestLocation(scanner bufio.Scanner) int {
 	seeds, maps := parseData(scanner)
 
-	seedLocations := make([]int, len(seeds))
+	lowestLocation := int(^uint(0) >> 1) // largest possible int
 
-	smallestIndex := 0
+	for i := 0; i < len(seeds); i += 2 {
+		seedsFrom := seeds[i]
+		seedsLength := seeds[i+1]
+		fmt.Printf("Searching seed range [%d, %d] with length %d\n", seedsFrom, seedsFrom+seedsLength, seedsLength)
 
-	for i, seed := range seeds {
-		seedLocations[i] = findLocation(seed, maps)
-		if seedLocations[i] < seedLocations[smallestIndex] {
-			smallestIndex = i
+		for currSeed := seedsFrom; currSeed <= seedsFrom+seedsLength; currSeed++ {
+			currLocation := findLocation(currSeed, maps)
+
+			// fmt.Printf("Found location %d for seed %d\n", currLocation, currSeed)
+
+			if currLocation < lowestLocation {
+				lowestLocation = currLocation
+			}
 		}
 	}
 
-	return seedLocations[smallestIndex]
+	return lowestLocation
 }
 
 func main() {
