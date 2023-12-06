@@ -6,6 +6,7 @@ import (
 	"os"
 	"regexp"
 	"strconv"
+	"strings"
 )
 
 func check(e error) {
@@ -29,6 +30,9 @@ func countdSimPoss(totalTime int, dist int) int {
 }
 
 func calcPossibilities(data []string) int {
+	data[0] = strings.ReplaceAll(data[0], " ", "")
+	data[1] = strings.ReplaceAll(data[1], " ", "")
+
 	reg := regexp.MustCompile("[0-9]+")
 	times := reg.FindAllString(data[0], -1)
 	dists := reg.FindAllString(data[1], -1)
