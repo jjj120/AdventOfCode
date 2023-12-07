@@ -15,13 +15,60 @@ func check(e error) {
 	}
 }
 
+func checkCards(cards map[rune]int, number int) bool {
+	// check for 5 same
+	for _, num := range cards {
+		if num == number {
+			return true
+		}
+	}
+	return false
+}
+
+func checkFullHouse(cards map[rune]int, jokers int) bool {
+	three := false
+	threeCard := '0'
+	// use jokers for first and no jokers for second
+	for card, num := range cards {
+		if num == 3 {
+			three = true
+			threeCard = card
+		}
+	}
+
+	for card, num := range cards {
+		if (num-jokers) == 2 && card != threeCard {
+			return three
+		}
+	}
+	return false
+}
+
+func checkDoublePair(cards map[rune]int, jokers int) bool {
+	two := false
+	twoCard := '0'
+	// use jokers for first and no jokers for second
+	for card, num := range cards {
+		if num == 2 {
+			two = true
+			twoCard = card
+		}
+	}
+
+	for card, num := range cards {
+		if (num-jokers) == 2 && card != twoCard {
+			return two
+		}
+	}
+	return false
+}
+
 func getType(line string) int {
 	// var cards map[string]int;
 	cards := map[rune]int{
 		'A': 0,
 		'K': 0,
 		'Q': 0,
-		'J': 0,
 		'T': 0,
 		'9': 0,
 		'8': 0,
@@ -31,54 +78,43 @@ func getType(line string) int {
 		'4': 0,
 		'3': 0,
 		'2': 0,
+		'J': 0,
 	}
 
+	// count occuring numbers
 	for _, char := range line {
-		cards[char]++
 		if char == ' ' {
 			break
 		}
+		cards[char]++
 	}
 
-	for _, num := range cards {
-		if num == 5 {
-			return 6
-		}
-		if num == 4 {
-			return 5
-		}
-	}
+	// increase cards by joker amount
+	jokers := cards['J']
+	cards['J'] = 0
 
-	// check for five of kind
-	for _, num := range cards {
-		if num == 5 {
-			return 6
-		}
-		if num == 4 {
-			return 5
+	for card := range cards {
+		if card != 'J' {
+			cards[card] += jokers
 		}
 	}
 
-	three := false
-	two := 0
-	for _, num := range cards {
-		if num == 3 {
-			three = true
-		}
-		if num == 2 {
-			two++
-		}
+	if checkCards(cards, 5) {
+		return 6
 	}
-	if three && (two == 1) {
+	if checkCards(cards, 4) {
+		return 5
+	}
+	if checkFullHouse(cards, jokers) {
 		return 4
 	}
-	if three {
+	if checkCards(cards, 3) {
 		return 3
 	}
-	if two == 2 {
+	if checkDoublePair(cards, jokers) {
 		return 2
 	}
-	if two == 1 {
+	if checkCards(cards, 2) {
 		return 1
 	}
 	return 0
@@ -89,22 +125,25 @@ func getCardValue(card rune) int {
 		'A': 12,
 		'K': 11,
 		'Q': 10,
-		'J': 9,
-		'T': 8,
-		'9': 7,
-		'8': 6,
-		'7': 5,
-		'6': 4,
-		'5': 3,
-		'4': 2,
-		'3': 1,
-		'2': 0,
+		'T': 9,
+		'9': 8,
+		'8': 7,
+		'7': 6,
+		'6': 5,
+		'5': 4,
+		'4': 3,
+		'3': 2,
+		'2': 1,
+		'J': 0,
 	}
 	return cards[card]
 }
 
 func sortArray(array *[]string) {
-	sort.Slice(*array, func(i, j int) bool {
+	sort.Slice((*array), func(i, j int) bool {
+		if i >= 1000 || j >= 1000 {
+			fmt.Printf("Invalid read at %d or %d", i, j)
+		}
 		linesI := strings.Split((*array)[i], " ")
 		linesJ := strings.Split((*array)[j], " ")
 
@@ -116,6 +155,14 @@ func sortArray(array *[]string) {
 		}
 		if typeI > typeJ {
 			return false
+		}
+
+		if len(linesI[0]) != 5 {
+			fmt.Printf("%s has length %d\n", linesI[0], len(linesI[0]))
+		}
+
+		if len(linesJ[0]) != 5 {
+			fmt.Printf("%s has length %d\n", linesJ[0], len(linesJ[0]))
 		}
 
 		iterator := 0
@@ -139,10 +186,15 @@ func sortArray(array *[]string) {
 func calcBids(array *[]string) int {
 	sum := 0
 	for i, line := range *array {
+		// fmt.Printf("%d: %s\n", i, line)
 		lineSplit := strings.Split(line, " ")
+		if len(lineSplit[0]) != 5 {
+			fmt.Printf("%s has length %d\n", lineSplit[0], len(lineSplit[0]))
+		}
 		num, err := strconv.ParseInt(lineSplit[1], 10, 0)
 		check(err)
-		sum += int(num) * (i + 1)
+		// fmt.Printf("Type: %d %s -> %d\n", getType(lineSplit[0]), line, i+1)
+		sum += (int(num) * (i + 1))
 	}
 	return sum
 }
@@ -166,14 +218,18 @@ func main() {
 		array = append(array, line)
 	}
 
-	sortArray(&array)
-
-	sum := calcBids(&array)
-
 	// Check for errors during scanning
 	if err := scanner.Err(); err != nil {
 		fmt.Println("Error reading file:", err)
 	}
+
+	sortArray(&array)
+
+	// for _, cards := range array {
+	// 	fmt.Println(cards)
+	// }
+
+	sum := calcBids(&array)
 
 	fmt.Printf("Sum: %d\n", sum)
 }
