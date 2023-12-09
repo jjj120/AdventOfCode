@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"regexp"
+	"slices"
 	"strconv"
 )
 
@@ -55,6 +56,7 @@ func handleLine(line string) int {
 		check(err)
 		matchesNumbers = append(matchesNumbers, int(num))
 	}
+	slices.Reverse[[]int](matchesNumbers)
 	newNumbers := extrapolateValues(matchesNumbers)
 	return newNumbers[len(newNumbers)-1]
 }
