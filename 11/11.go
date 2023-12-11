@@ -17,6 +17,8 @@ type Galaxy struct {
 	newX, newY int
 }
 
+const expansionFactor = 1000000
+
 func findGalaxies(data []string) []Galaxy {
 	var galaxies []Galaxy
 	for y, line := range data {
@@ -49,14 +51,14 @@ func expandRows(data []string, galaxies []Galaxy) []Galaxy {
 	for i, line := range data {
 		if i == 0 {
 			if lineEmpty(line) {
-				expandAmount[i] = 1
+				expandAmount[i] = expansionFactor - 1
 			} else {
 				expandAmount[i] = 0
 			}
 			continue
 		}
 		if lineEmpty(line) {
-			expandAmount[i] = expandAmount[i-1] + 1
+			expandAmount[i] = expandAmount[i-1] + expansionFactor - 1
 		} else {
 			expandAmount[i] = expandAmount[i-1] + 0
 		}
@@ -83,14 +85,14 @@ func expandCols(data []string, galaxies []Galaxy) []Galaxy {
 	for i := range data[0] {
 		if i == 0 {
 			if colEmpty(data, i) {
-				expandAmount[i] = 1
+				expandAmount[i] = expansionFactor - 1
 			} else {
 				expandAmount[i] = 0
 			}
 			continue
 		}
 		if colEmpty(data, i) {
-			expandAmount[i] = expandAmount[i-1] + 1
+			expandAmount[i] = expandAmount[i-1] + expansionFactor - 1
 		} else {
 			expandAmount[i] = expandAmount[i-1] + 0
 		}
