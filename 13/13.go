@@ -29,16 +29,17 @@ func transpose(slice [][]string) [][]string {
 	return result
 }
 
-func lineEquals(block [][]string, line1 int, line2 int) bool {
-	if (line1 < 0 || line1 >= len(block)) || (line2 < 0 || line2 >= len(block)) {
-		return false
-	}
+func lineEquals(block [][]string, line1 int, line2 int) int {
+	// if (line1 < 0 || line1 >= len(block)) || (line2 < 0 || line2 >= len(block)) {
+	// 	return false
+	// }
+	diffs := 0
 	for j, char := range block[line1] {
 		if strings.Compare(char, block[line2][j]) != 0 {
-			return false
+			diffs++
 		}
 	}
-	return true
+	return diffs
 }
 
 func checkHMirror(block [][]string, mirrorAfter int) bool {
@@ -47,18 +48,18 @@ func checkHMirror(block [][]string, mirrorAfter int) bool {
 	}
 
 	if mirrorAfter == 0 {
-		return lineEquals(block, 0, 1)
+		return lineEquals(block, 0, 1) == 1
 	}
 
+	diffs := 0
 	for offset := 0; offset <= min(mirrorAfter, len(block)-mirrorAfter-2); offset++ {
-		if !lineEquals(block, mirrorAfter-offset, mirrorAfter+offset+1) {
-			// fmt.Printf("Not equal at offset=%d, mirrorAfter=%d:\n", offset, mirrorAfter)
-			// fmt.Println(block[mirrorAfter-offset], " != ", block[mirrorAfter+offset+1])
+		diffs += lineEquals(block, mirrorAfter-offset, mirrorAfter+offset+1)
+		if diffs > 1 {
 			return false
 		}
 	}
 
-	return true
+	return diffs == 1
 }
 
 func getHorizontalMirror(block [][]string) int {
