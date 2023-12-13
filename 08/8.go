@@ -13,19 +13,63 @@ func check(e error) {
 	}
 }
 
-func goThroughMap(firstLine string, nodes map[string][]string) int {
-	currNode := "AAA"
-	steps := 0
-	for i := 0; strings.Compare(currNode, "ZZZ") != 0; i = ((i + 1) % len(firstLine)) {
-		if firstLine[i] == 'L' {
-			currNode = nodes[currNode][0]
-		} else {
-			currNode = nodes[currNode][1]
-		}
-		// fmt.Println(currNode)
-		steps++
+func singleStep(dir byte, currNode string, nodes map[string][]string) string {
+	if dir == 'L' {
+		return nodes[currNode][0]
+	} else {
+		return nodes[currNode][1]
 	}
-	return steps
+}
+
+func currNodesEndNodes(currNode []string) bool {
+	for _, node := range currNode {
+		if node[2] != 'Z' {
+			return false
+		}
+	}
+	return true
+}
+
+func ggt(num1 int, num2 int) int {
+	for num2 != 0 {
+		num1, num2 = num2, num1%num2
+	}
+	return num1
+}
+
+func kgv(num1 int, num2 int) int {
+	return (num1 * num2) / ggt(num1, num2)
+}
+
+func kgvSteps(steps []int) int {
+	if len(steps) == 0 {
+		return 0
+	}
+	res := steps[0]
+	for i := 1; i < len(steps); i++ {
+		res = kgv(res, steps[i])
+	}
+	return res
+}
+
+func goThroughMap(firstLine string, nodes map[string][]string, startNodes []string) int {
+	steps := make([]int, len(startNodes))
+
+	for i, start := range startNodes {
+		for start[2] != 'Z' {
+			nextStep := firstLine[steps[i]%len(firstLine)]
+			if nextStep == 'L' {
+				start = nodes[start][0]
+			} else {
+				start = nodes[start][1]
+			}
+			steps[i]++
+		}
+	}
+
+	res := kgvSteps(steps)
+
+	return res
 }
 
 func main() {
@@ -42,8 +86,7 @@ func main() {
 
 	scanner.Scan()
 	firstLine := scanner.Text()
-	var nodes map[string][]string
-	nodes = make(map[string][]string)
+	nodes := make(map[string][]string)
 
 	scanner.Scan()
 	// Iterate through each line
@@ -58,7 +101,13 @@ func main() {
 		// fmt.Println(nodes)
 	}
 
-	sum := goThroughMap(firstLine, nodes)
+	startNodes := make([]string, 0)
+	for node := range nodes {
+		if node[2] == 'A' {
+			startNodes = append(startNodes, node)
+		}
+	}
+	sum := goThroughMap(firstLine, nodes, startNodes)
 
 	// Check for errors during scanning
 	if err := scanner.Err(); err != nil {
