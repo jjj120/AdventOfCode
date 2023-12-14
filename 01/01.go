@@ -14,14 +14,17 @@ func check(e error) {
 
 func handleLine(line string) int {
 	currFloor := 0
-	for _, c := range line {
+	for i, c := range line {
 		if c == '(' {
 			currFloor++
 		} else if c == ')' {
 			currFloor--
 		}
+		if currFloor < 0 {
+			return i + 1
+		}
 	}
-	return currFloor
+	return 0
 }
 
 func main() {
