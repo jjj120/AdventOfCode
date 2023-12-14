@@ -22,8 +22,15 @@ func reduceLine(line string) int {
 	return len(line) - len(line2)
 }
 
+func enlargeLine(line string) int {
+	line2 := regexp.MustCompile(`\\`).ReplaceAll([]byte(line), []byte(`\\`))
+	line2 = regexp.MustCompile(`"`).ReplaceAll([]byte(line2), []byte(`\"`))
+	fmt.Printf("%s -> %s, %d -> %d\n", line, line2, len(line), len(line2))
+	return 2 + len(line2) - len(line)
+}
+
 func handleLine(line string) int {
-	return reduceLine(line)
+	return enlargeLine(line)
 }
 
 func main() {
