@@ -190,7 +190,22 @@ func main() {
 		handleLine(&assignments, line)
 	}
 
-	sum := evaluate(&assignments, "a")
+	newAssignments := make(map[string]Operation)
+	for k, v := range assignments {
+		newAssignments[k] = v
+	}
+
+	var op Operation
+	op.assignedTo = "b"
+	op.operation = ASSIGNMENT
+	op.solved = true
+	op.solvedValue = evaluate(&assignments, "a")
+
+	fmt.Printf("b: %d\n", op.solvedValue)
+
+	newAssignments[op.assignedTo] = op
+
+	sum := evaluate(&newAssignments, "a")
 
 	// Check for errors during scanning
 	if err := scanner.Err(); err != nil {
