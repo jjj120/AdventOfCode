@@ -16,7 +16,7 @@ func check(e error) {
 }
 
 func hasZeros(hash string) bool {
-	return strings.Compare("00000", hash[:5]) == 0
+	return strings.Compare("000000", hash[:6]) == 0
 }
 
 func GetMD5Hash(text string) string {
