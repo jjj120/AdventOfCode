@@ -13,33 +13,36 @@ func check(e error) {
 	}
 }
 
-func checkVowels(line string) bool {
-	vowels := 0
-	for _, char := range line {
-		if char == 'a' || char == 'e' || char == 'i' || char == 'o' || char == 'u' {
-			vowels++
-		}
-	}
-	return (vowels >= 3)
-}
-
 func checkLettersContaining(line string) bool {
 	letters := "abcdefghijklmnopqrstuvwxyz"
-	for _, char := range letters {
-		str := "" + string(char) + string(char)
-		if strings.Contains(line, str) {
-			return true
+	for _, char1 := range letters {
+		for _, char2 := range letters {
+			str := string(char1) + string(char2)
+			if strings.Count(line, str) >= 2 {
+				return true
+			}
 		}
 	}
+	// fmt.Printf("Found no two doubles in %s\n", line)
 	return false
 }
 
-func checkLettersNotContaining(line string) bool {
-	return !strings.Contains(line, "ab") && !strings.Contains(line, "cd") && !strings.Contains(line, "pq") && !strings.Contains(line, "xy")
+func checkLettersContaining2(line string) bool {
+	letters := "abcdefghijklmnopqrstuvwxyz"
+	for _, char1 := range letters {
+		for _, char2 := range letters {
+			str := string(char1) + string(char2) + string(char1)
+			if strings.Contains(line, str) {
+				return true
+			}
+		}
+	}
+	// fmt.Printf("Found no mirror in %s\n", line)
+	return false
 }
 
 func handleLine(line string) int {
-	if checkVowels(line) && checkLettersContaining(line) && checkLettersNotContaining(line) {
+	if checkLettersContaining(line) && checkLettersContaining2(line) {
 		return 1
 	}
 	return 0
