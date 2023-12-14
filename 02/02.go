@@ -35,10 +35,9 @@ func convertToBox(line string) Box {
 
 func handleLine(line string) int64 {
 	box := convertToBox(line)
-	area := 2*box.l*box.w + 2*box.w*box.h + 2*box.h*box.l
-
-	slack := min(box.h*box.l, box.h*box.w, box.l*box.w)
-	return area + slack
+	volume := box.l * box.w * box.h
+	ribbon := min(2*(box.h+box.l), 2*(box.h+box.w), 2*(box.l+box.w))
+	return volume + ribbon
 }
 
 func main() {
