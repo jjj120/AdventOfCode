@@ -14,18 +14,22 @@ func check(e error) {
 	}
 }
 
-func setLight(lights *[1000][1000]bool, x1, y1, x2, y2 int, lightStatus bool) {
+func setLight(lights *[1000][1000]int, x1, y1, x2, y2 int, lightStatus bool) {
 	for x := min(x1, x2); x <= max(x1, x2); x++ {
 		for y := min(y1, y2); y <= max(y1, y2); y++ {
-			(*lights)[y][x] = lightStatus
+			if lightStatus {
+				(*lights)[y][x]++
+			} else {
+				(*lights)[y][x] = max((*lights)[y][x]-1, 0)
+			}
 		}
 	}
 }
 
-func toggleLight(lights *[1000][1000]bool, x1, y1, x2, y2 int) {
+func toggleLight(lights *[1000][1000]int, x1, y1, x2, y2 int) {
 	for x := min(x1, x2); x <= max(x1, x2); x++ {
 		for y := min(y1, y2); y <= max(y1, y2); y++ {
-			(*lights)[y][x] = !lights[y][x]
+			(*lights)[y][x] += 2
 		}
 	}
 }
@@ -36,33 +40,27 @@ func strToInt(str string) int {
 	return int(num)
 }
 
-func countOn(lights *[1000][1000]bool) int {
+func countOn(lights *[1000][1000]int) int {
+	lightLevel := 0
+	for _, line := range *lights {
+		for _, light := range line {
+			lightLevel += light
+		}
+	}
+	return lightLevel
+}
+
+func printLights(lights *[1000][1000]int) int {
 	lit := 0
 	for _, line := range *lights {
 		for _, light := range line {
-			if light {
-				lit++
-			}
+			fmt.Printf("%d", light)
 		}
 	}
 	return lit
 }
 
-func printLights(lights *[1000][1000]bool) int {
-	lit := 0
-	for _, line := range *lights {
-		for _, light := range line {
-			if light {
-				fmt.Printf("1")
-			} else {
-				fmt.Printf("0")
-			}
-		}
-	}
-	return lit
-}
-
-func handleLine(lights *[1000][1000]bool, line string) int {
+func handleLine(lights *[1000][1000]int, line string) int {
 	line = strings.ReplaceAll(line, "turn ", "")
 	instructions := strings.Split(line, " ")
 
@@ -82,8 +80,6 @@ func handleLine(lights *[1000][1000]bool, line string) int {
 		toggleLight(lights, x1, y1, x2, y2)
 	}
 
-	// printLights(lights)
-
 	return 0
 }
 
@@ -99,7 +95,7 @@ func main() {
 	// Create a scanner to read the file line by line
 	scanner := bufio.NewScanner(file)
 
-	var lights [1000][1000]bool
+	var lights [1000][1000]int
 
 	// Iterate through each line
 	for scanner.Scan() {
