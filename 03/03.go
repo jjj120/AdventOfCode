@@ -14,22 +14,40 @@ func check(e error) {
 
 func handleLine(line string) int {
 	var history map[[2]int]int = make(map[[2]int]int)
-	currPos := [2]int{0, 0}
-	history[currPos]++
 
-	for _, dir := range line {
-		switch dir {
-		case '^':
-			currPos[1]++
-		case '>':
-			currPos[0]++
-		case 'v':
-			currPos[1]--
-		case '<':
-			currPos[0]--
+	currPosReal := [2]int{0, 0}
+	currPosRobo := [2]int{0, 0}
+
+	history[currPosRobo]++
+
+	for i, dir := range line {
+		if i%2 == 0 {
+			switch dir {
+			case '^':
+				currPosRobo[1]++
+			case '>':
+				currPosRobo[0]++
+			case 'v':
+				currPosRobo[1]--
+			case '<':
+				currPosRobo[0]--
+			}
+
+			history[currPosRobo]++
+		} else {
+			switch dir {
+			case '^':
+				currPosReal[1]++
+			case '>':
+				currPosReal[0]++
+			case 'v':
+				currPosReal[1]--
+			case '<':
+				currPosReal[0]--
+			}
+
+			history[currPosReal]++
 		}
-
-		history[currPos]++
 	}
 
 	return len(history)
