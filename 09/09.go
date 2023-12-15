@@ -54,7 +54,7 @@ func findLen(connections map[string][]connection, history []string) int {
 		return 0
 	}
 
-	shortest := 10000000000000000
+	shortest := 0
 	for key := range connections {
 		if !slices.Contains(history, key) {
 			history2 := make([]string, len(history))
@@ -68,7 +68,7 @@ func findLen(connections map[string][]connection, history []string) int {
 					continue
 				}
 			}
-			shortest = min(shortest, findLen(connections, history2)+costs)
+			shortest = max(shortest, findLen(connections, history2)+costs)
 		}
 	}
 
