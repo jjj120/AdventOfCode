@@ -8,7 +8,7 @@ import (
 	"strings"
 )
 
-const REPEAT_TIMES = 40
+const REPEAT_TIMES = 50
 
 func check(e error) {
 	if e != nil {
