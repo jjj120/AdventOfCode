@@ -82,7 +82,7 @@ func countEnergized(energized [][]bool) int {
 	return sum
 }
 
-func handleData(data [][]byte) int {
+func initEnergized(data [][]byte) [][]bool {
 	energized := make([][]bool, len(data))
 	for i := 0; i < len(data); i++ {
 		energized[i] = make([]bool, len(data[i]))
@@ -90,9 +90,37 @@ func handleData(data [][]byte) int {
 			energized[i][j] = false
 		}
 	}
+	return energized
+}
 
-	var history [][4]int
-	energize(data, energized, 0, 0, 1, 0, &history)
+func handleData(data [][]byte) int {
+
+	mostEnergized := 0
+	// top and bottom rows
+	for i := 0; i < len(data[0]); i++ {
+		var history [][4]int
+		energized := initEnergized(data)
+		energize(data, energized, i, 0, 0, 1, &history)
+		mostEnergized = max(mostEnergized, countEnergized(energized))
+
+		history = make([][4]int, 0)
+		energized = initEnergized(data)
+		energize(data, energized, i, len(data[0])-1, 0, -1, &history)
+		mostEnergized = max(mostEnergized, countEnergized(energized))
+	}
+
+	// left and right col
+	for i := 0; i < len(data); i++ {
+		var history [][4]int
+		energized := initEnergized(data)
+		energize(data, energized, 0, i, 1, 0, &history)
+		mostEnergized = max(mostEnergized, countEnergized(energized))
+
+		history = make([][4]int, 0)
+		energized = initEnergized(data)
+		energize(data, energized, len(data)-1, i, -1, 0, &history)
+		mostEnergized = max(mostEnergized, countEnergized(energized))
+	}
 
 	// for i := 0; i < len(energized); i++ {
 	// 	for j := 0; j < len(energized[i]); j++ {
@@ -105,7 +133,7 @@ func handleData(data [][]byte) int {
 	// 	fmt.Println("")
 	// }
 
-	return countEnergized(energized)
+	return mostEnergized
 }
 
 func main() {
