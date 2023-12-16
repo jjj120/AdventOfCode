@@ -2,10 +2,10 @@ package main
 
 import (
 	"bufio"
+	"encoding/json"
 	"fmt"
 	"os"
-	"regexp"
-	"strconv"
+	"strings"
 )
 
 func check(e error) {
@@ -14,16 +14,48 @@ func check(e error) {
 	}
 }
 
-func handleLine(line string) int {
-	regex := regexp.MustCompile(`-?[0-9]+`)
-	numbers := regex.FindAllString(line, -1)
-
+func sumDataArr(data []interface{}) int {
 	sum := 0
-	for _, number := range numbers {
-		num, err := strconv.ParseInt(number, 10, 0)
-		check(err)
-		sum += int(num)
+	for _, v := range data {
+		if obj, ok := v.(map[string]interface{}); ok {
+			sum += sumDataObj(obj)
+		} else if arr, ok := v.([]interface{}); ok {
+			sum += sumDataArr(arr)
+		} else if num, ok := v.(float64); ok {
+			sum += int(num)
+		}
 	}
+	return sum
+}
+
+func sumDataObj(data map[string]interface{}) int {
+	sum := 0
+	for k, v := range data {
+		switch v := v.(type) {
+		case string:
+			if strings.Contains(v, "red") {
+				return 0
+			}
+		case float64:
+			sum += int(v)
+		case []interface{}:
+			sum += sumDataArr(v)
+		case map[string]interface{}:
+			sum += sumDataObj(v)
+		default:
+			fmt.Println(k, v, "(unknown)")
+		}
+	}
+	return sum
+}
+
+func handleLine(line string) int {
+	var v []interface{}
+
+	err := json.Unmarshal([]byte(line), &v)
+	check(err)
+
+	sum := sumDataArr(v)
 
 	return sum
 }
