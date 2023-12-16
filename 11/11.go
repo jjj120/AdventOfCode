@@ -76,6 +76,12 @@ func handleLine(line string) int {
 		num++
 	}
 
+	num++
+
+	for !checkStr(intToStr(num)) {
+		num++
+	}
+
 	fmt.Println(intToStr(num))
 	return 0
 }
