@@ -24,7 +24,8 @@ type queueEntry struct {
 	currCosts                int
 }
 
-const MAX_BUFFER = 1000000
+const MIN_STRAIGHT_STEPS = 4
+const MAX_STRAIGHT_STEPS = 10
 
 func queueToHist(qu queueEntry) histEntry {
 	var his histEntry
@@ -76,7 +77,7 @@ func histToQueue(his histEntry, cost int) queueEntry {
 }
 
 func findSmallestHeatLoss(data [][]int) int {
-	queue := make([]queueEntry, MAX_BUFFER)
+	queue := make([]queueEntry, 0)
 
 	queue = append(queue, makeQueueEntry(1, 0, 1, 0, 1, data[0][1]))
 	queue = append(queue, makeQueueEntry(0, 1, 0, 1, 1, data[1][0]))
@@ -97,7 +98,7 @@ func findSmallestHeatLoss(data [][]int) int {
 
 		history[queueToHist(currEntry)] = true
 
-		if currEntry.straightSteps < 3 {
+		if currEntry.straightSteps < MAX_STRAIGHT_STEPS {
 			en := makeHistEntry(currEntry.currX+currEntry.dirX, currEntry.currY+currEntry.dirY, currEntry.dirX, currEntry.dirY, currEntry.straightSteps+1)
 			if checkBoundsHist(data, en) {
 				queue = append(queue, histToQueue(en, currEntry.currCosts+data[en.currY][en.currX]))
@@ -107,20 +108,22 @@ func findSmallestHeatLoss(data [][]int) int {
 			}
 		}
 
-		en := makeHistEntry(currEntry.currX+currEntry.dirY, currEntry.currY+currEntry.dirX, currEntry.dirY, currEntry.dirX, 1)
-		if checkBoundsHist(data, en) {
-			queue = append(queue, histToQueue(en, currEntry.currCosts+data[en.currY][en.currX]))
-			sort.Slice(queue, func(i, j int) bool {
-				return queue[i].currCosts < queue[j].currCosts
-			})
-		}
+		if currEntry.straightSteps >= MIN_STRAIGHT_STEPS {
+			en := makeHistEntry(currEntry.currX+currEntry.dirY, currEntry.currY+currEntry.dirX, currEntry.dirY, currEntry.dirX, 1)
+			if checkBoundsHist(data, en) {
+				queue = append(queue, histToQueue(en, currEntry.currCosts+data[en.currY][en.currX]))
+				sort.Slice(queue, func(i, j int) bool {
+					return queue[i].currCosts < queue[j].currCosts
+				})
+			}
 
-		en = makeHistEntry(currEntry.currX-currEntry.dirY, currEntry.currY-currEntry.dirX, -currEntry.dirY, -currEntry.dirX, 1)
-		if checkBoundsHist(data, en) {
-			queue = append(queue, histToQueue(en, currEntry.currCosts+data[en.currY][en.currX]))
-			sort.Slice(queue, func(i, j int) bool {
-				return queue[i].currCosts < queue[j].currCosts
-			})
+			en = makeHistEntry(currEntry.currX-currEntry.dirY, currEntry.currY-currEntry.dirX, -currEntry.dirY, -currEntry.dirX, 1)
+			if checkBoundsHist(data, en) {
+				queue = append(queue, histToQueue(en, currEntry.currCosts+data[en.currY][en.currX]))
+				sort.Slice(queue, func(i, j int) bool {
+					return queue[i].currCosts < queue[j].currCosts
+				})
+			}
 		}
 	}
 
