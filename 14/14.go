@@ -30,8 +30,24 @@ func handleLine(reindeers *[]Reindeer, line string) {
 	*reindeers = append(*reindeers, rein)
 }
 
+func givePoints(dist []int, points []int) {
+	max := 0
+	for _, val := range dist {
+		if val > max {
+			max = val
+		}
+	}
+
+	for i, val := range dist {
+		if val == max {
+			points[i]++
+		}
+	}
+}
+
 func simReindeers(reindeers []Reindeer, time int) int {
 	deersDist := make([]int, len(reindeers))
+	deersPoints := make([]int, len(reindeers))
 
 	for t := 0; t < time; t++ {
 		for i, rein := range reindeers {
@@ -39,12 +55,13 @@ func simReindeers(reindeers []Reindeer, time int) int {
 				deersDist[i] += rein.speed
 			}
 		}
+		givePoints(deersDist, deersPoints)
 	}
 
 	max := 0
-	for _, dist := range deersDist {
-		if dist > max {
-			max = dist
+	for _, points := range deersPoints {
+		if points > max {
+			max = points
 		}
 	}
 
