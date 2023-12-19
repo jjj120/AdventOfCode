@@ -67,7 +67,17 @@ func findAunt(aunts []Aunt) int {
 
 		found := true
 		for thing, value := range aunt.Things {
-			if mainAunt.Things[thing] != value {
+			if thing == "cats" || thing == "trees" {
+				if mainAunt.Things[thing] >= value {
+					found = false
+					break
+				}
+			} else if thing == "pomeranians" || thing == "goldfish" {
+				if mainAunt.Things[thing] <= value {
+					found = false
+					break
+				}
+			} else if mainAunt.Things[thing] != value {
 				found = false
 				break
 			}
