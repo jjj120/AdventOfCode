@@ -19,9 +19,12 @@ func handleLine(line string) int {
 	return num
 }
 
-func countCombinations(containers []int, target int) int {
+func countCombinations(containers []int, target int, numberOfContainersLeft int) int {
 	if target == 0 {
-		return 1
+		if numberOfContainersLeft == 0 {
+			return 1
+		}
+		return 0
 	}
 
 	if len(containers) == 0 {
@@ -31,10 +34,30 @@ func countCombinations(containers []int, target int) int {
 	var sum = 0
 	for i := 0; i < len(containers); i++ {
 		if containers[i] <= target {
-			sum += countCombinations(containers[i+1:], target-containers[i])
+			sum += countCombinations(containers[i+1:], target-containers[i], numberOfContainersLeft-1)
 		}
 	}
+
 	return sum
+}
+
+func findMinNumberOfContainers(containers []int, target int) int {
+	if target == 0 {
+		return 0
+	}
+
+	if len(containers) == 0 {
+		return 1000000
+	}
+
+	var minimum = 1000000
+	for i := 0; i < len(containers); i++ {
+		if containers[i] <= target {
+			num := findMinNumberOfContainers(containers[i+1:], target-containers[i])
+			minimum = min(minimum, num)
+		}
+	}
+	return minimum + 1
 }
 
 func main() {
@@ -57,7 +80,11 @@ func main() {
 		containers = append(containers, handleLine(line))
 	}
 
-	sum = countCombinations(containers, 150)
+	minumum := findMinNumberOfContainers(containers, 150)
+
+	fmt.Println(minumum)
+
+	sum = countCombinations(containers, 150, minumum)
 
 	// Check for errors during scanning
 	if err := scanner.Err(); err != nil {
