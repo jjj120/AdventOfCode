@@ -86,12 +86,20 @@ func calcScore(ingredients []Ingredient, amount []int) int {
 	return cap * dur * fla * tex
 }
 
+func calcCalories(ingredients []Ingredient, amount []int) int {
+	cal := 0
+	for i, ing := range ingredients {
+		cal += ing.calories * amount[i]
+	}
+
+	return cal
+}
+
 func findMaxScore(ingredients []Ingredient, amounts []int) int {
 	if len(amounts) == len(ingredients) {
-		// fmt.Printf("Finished with amounts len: %d and Ingredients len: %d\n", len(amounts), len(ingredients))
-		// if calcScore(ingredients, amounts) != 0 && calcScore(ingredients, amounts) > 0 {
-		// 	fmt.Println(calcScore(ingredients, amounts))
-		// }
+		if calcCalories(ingredients, amounts) != 500 {
+			return 0
+		}
 		return calcScore(ingredients, amounts)
 	}
 
@@ -107,8 +115,6 @@ func findMaxScore(ingredients []Ingredient, amounts []int) int {
 		newAmounts := make([]int, len(amounts))
 		copy(newAmounts, amounts)
 		newAmounts = append(newAmounts, i)
-
-		// fmt.Println(newAmounts)
 
 		score := findMaxScore(ingredients, newAmounts)
 		maxScore = max(maxScore, score)
