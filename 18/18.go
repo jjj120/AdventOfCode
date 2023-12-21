@@ -26,6 +26,13 @@ func handleLine(line string, lights *[100][100]bool, y int) int {
 	return 0
 }
 
+func setCorners(lights *[100][100]bool) {
+	(*lights)[0][0] = true
+	(*lights)[0][99] = true
+	(*lights)[99][0] = true
+	(*lights)[99][99] = true
+}
+
 func countNeighbors(lights *[100][100]bool, x int, y int) int {
 	dirs := [8][2]int{
 		{-1, -1},
@@ -134,6 +141,7 @@ func main() {
 
 	for i := 0; i < 100; i++ {
 		makeStep(&lights)
+		setCorners(&lights)
 		printLights(&lights)
 		time.Sleep(10 * time.Millisecond)
 	}
