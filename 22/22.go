@@ -236,6 +236,51 @@ func countDisintegrated(bricks []Brick, supports map[int][]int, supportedBy map[
 	return sum
 }
 
+func countFalling(bricks []Brick, supports map[int][]int, supportedBy map[int][]int, removed int) int {
+	var sum = 0
+
+	queue := []int{removed}
+	visited := make(map[int]bool)
+	for len(queue) > 0 {
+		var current = queue[0]
+		queue = queue[1:]
+		if visited[current] {
+			continue
+		}
+		visited[current] = true
+		sum++
+		for _, supported := range supports[current] {
+			if len(supportedBy[supported]) == 1 {
+				queue = append(queue, supported)
+			}
+
+			letFall := true
+			for _, support := range supportedBy[supported] {
+				if support != current && !visited[support] {
+					letFall = false
+					break
+				}
+			}
+			if letFall {
+				queue = append(queue, supported)
+			}
+		}
+	}
+
+	return sum - 1 // -1 because the removed brick does not count
+}
+
+func sumFalling(bricks []Brick, supports map[int][]int, supportedBy map[int][]int) int {
+	var sum = 0
+
+	for _, brick := range bricks {
+		sum += countFalling(bricks, supports, supportedBy, brick.name)
+		// fmt.Printf("Brick %d: %d\n", brick.name, countFalling(bricks, supports, supportedBy, brick.name))
+	}
+
+	return sum
+}
+
 func main() {
 	// Open the file
 	file, err := os.Open("22.in")
@@ -281,7 +326,7 @@ func main() {
 
 	// plotCoords(&arr, bricks, "viz.png", colors)
 
-	sum = countDisintegrated(bricks, supports, supportedBy)
+	sum = sumFalling(bricks, supports, supportedBy)
 
 	// Check for errors during scanning
 	if err := scanner.Err(); err != nil {
