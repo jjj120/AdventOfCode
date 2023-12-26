@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"reflect"
 	"strings"
 )
 
@@ -105,7 +106,7 @@ type State struct {
 	pulse bool
 }
 
-func simulatePress(connections *map[string]interface{}) [2]int {
+func simulatePress(connections *map[string]interface{}, loops map[string]int, pressNumber int) ([2]int, bool) {
 	queue := make([]State, 0)
 
 	originalConnections := make(map[string]interface{})
@@ -117,6 +118,7 @@ func simulatePress(connections *map[string]interface{}) [2]int {
 	pulses := [2]int{1, 0} // [low, high] (start wit 1 low pulse from button)
 
 	steps := 0
+	found := false
 	for len(queue) > 0 {
 		currState := queue[0]
 		if DEBUG_PRINT {
@@ -130,6 +132,11 @@ func simulatePress(connections *map[string]interface{}) [2]int {
 
 		if currState.name == "out" {
 			continue
+		}
+
+		if currState.name == "rx" && !currState.pulse {
+			// set found if a low pulse is received on rx
+			found = true
 		}
 
 		pulse := currState.pulse
@@ -164,7 +171,7 @@ func simulatePress(connections *map[string]interface{}) [2]int {
 			}
 			(*connections)[currState.name] = module
 		case Conjunction:
-			// Conjunction -- remembers all pulses, sends high pulse when all pulses are high, low pulse otherwise
+			// Conjunction -- remembers all pulses, sends low pulse when all pulses are high, high pulse otherwise
 			module.watches[currState.from] = pulse
 			(*connections)[currState.name] = module
 
@@ -185,11 +192,17 @@ func simulatePress(connections *map[string]interface{}) [2]int {
 				}
 			}
 			(*connections)[currState.name] = module
+
+			currLoop, ok := loops[currState.name]
+			if ok && !allTrue && currLoop == -1 {
+				fmt.Println("Found loop", currState.name, "at press", pressNumber, "with pulse", allTrue, loops)
+				loops[currState.name] = pressNumber
+			}
 		}
 
 		steps++
 	}
-	return pulses
+	return pulses, found
 }
 
 func sumHistory(hist [][2]int) int {
@@ -220,6 +233,65 @@ func printConnStatus(connections map[string]interface{}) {
 	fmt.Println("---------------------------\n")
 }
 
+func connectsTo(from, to string, connections map[string]interface{}) bool {
+	switch module := connections[from].(type) {
+	case Broadcaster:
+		for _, name := range module.connectsTo {
+			if strings.Compare(name, to) == 0 {
+				return true
+			}
+		}
+	case FlipFlop:
+		for _, name := range module.connectsTo {
+			if strings.Compare(name, to) == 0 {
+				return true
+			}
+		}
+	case Conjunction:
+		for _, name := range module.connectsTo {
+			if strings.Compare(name, to) == 0 {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func copyConnections(connections map[string]interface{}) map[string]interface{} {
+	copy := make(map[string]interface{})
+	for k, v := range connections {
+		copy[k] = v
+	}
+	return copy
+}
+
+func includedInHistory(hist []map[string]interface{}, connections map[string]interface{}) int {
+	for i, histConnections := range hist {
+		if len(histConnections) != len(connections) {
+			continue
+		}
+		if reflect.DeepEqual(histConnections, connections) {
+			return i
+		}
+	}
+	return -1
+}
+
+// func getLoopLength(name string, connections map[string]interface{}) (int, int) {
+// 	hist := make([]map[string]interface{}, 0)
+// 	hist = append(hist, copyConnections(connections))
+
+// 	currIndex := 0
+// 	for {
+// 		simulatePress(&connections)
+// 		printConnStatus(connections)
+// 		histIndex := includedInHistory(hist, connections)
+// 		if histIndex != -1 {
+// 			return histIndex, currIndex - histIndex
+// 		}
+// 	}
+// }
+
 func main() {
 	// Open the file
 	file, err := os.Open("20.in")
@@ -244,38 +316,63 @@ func main() {
 
 	printConnStatus(connections)
 
-	numButtonPresses := 1000
-
-	hist := make([][2]int, 0)
-	for i := 0; i < numButtonPresses; i++ {
-		hist = append(hist, simulatePress(&connections))
-		printConnStatus(connections)
+	pxPrev := make([]string, 0)
+	for k := range connections {
+		if connectsTo(k, "rx", connections) {
+			pxPrev = append(pxPrev, k)
+		}
 	}
 
-	if DEBUG_PRINT {
-		fmt.Println(hist)
+	if !(len(pxPrev) == 1) {
+		panic("Error: more than one pxPrev")
 	}
 
-	sum = sumHistory(hist)
+	var conj Conjunction
+	switch connections[pxPrev[0]].(type) {
+	case Conjunction:
+		conj = connections[pxPrev[0]].(Conjunction)
+	default:
+		panic("Error: pxPrev is not a conjunction")
+	}
 
-	// loopEnd, loopLen, hist := findLoopLen(connections)
+	fmt.Println(conj)
 
-	// loopTimes := (1000 - loopEnd) / loopLen
-	// remainder := (1000 - loopEnd) % loopLen
+	loopLengths := make(map[string]int)
+	for name := range conj.watches {
+		loopLengths[name] = -1
+	}
 
-	// low := 0
-	// high := 0
+	pressNumber := 0
+	for {
+		pressNumber++
+		pulses, found := simulatePress(&connections, loopLengths, pressNumber)
+		if DEBUG_PRINT {
+			fmt.Printf("HighPulses: %d, LowPulses: %d\n", pulses[1], pulses[0])
+		}
+		if found {
+			break
+		}
+		complete := true
+		for _, length := range loopLengths {
+			if length == -1 {
+				complete = false
+				break
+			}
+		}
+		if complete {
+			break
+		}
+		if pressNumber%10000 == 0 {
+			fmt.Printf("%d, %v\n", pressNumber, loopLengths)
+		}
+	}
 
-	// for i, pulses := range hist {
-	// 	if i <= remainder {
-	// 		low += pulses[0]
-	// 		high += pulses[1]
-	// 		continue
-	// 	}
-	// 	low += loopTimes * pulses[0]
-	// 	high += loopTimes * pulses[1]
-	// }
-	// sum = high * low
+	fmt.Println(loopLengths)
+
+	sum = 1
+	for _, length := range loopLengths {
+		sum *= length
+	}
 
 	// Check for errors during scanning
 	if err := scanner.Err(); err != nil {
