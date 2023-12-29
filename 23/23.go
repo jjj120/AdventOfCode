@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"slices"
+	"strings"
 
 	"github.com/dominikbraun/graph"
 )
@@ -109,16 +110,6 @@ func nextDirections(hikingMap [][]int, point []int) [][]int {
 		{-1, 0},
 	}
 
-	if hikingMap[point[0]][point[1]] == SLOPE_UP {
-		return [][]int{{-1, 0}}
-	} else if hikingMap[point[0]][point[1]] == SLOPE_DOWN {
-		return [][]int{{1, 0}}
-	} else if hikingMap[point[0]][point[1]] == SLOPE_RIGHT {
-		return [][]int{{0, 1}}
-	} else if hikingMap[point[0]][point[1]] == SLOPE_LEFT {
-		return [][]int{{0, -1}}
-	}
-
 	possibleDirs := make([][]int, 0)
 	for _, dir := range dirs {
 		newPoint := []int{point[0] + dir[0], point[1] + dir[1]}
@@ -127,16 +118,6 @@ func nextDirections(hikingMap [][]int, point []int) [][]int {
 		}
 
 		if hikingMap[newPoint[0]][newPoint[1]] == FOREST {
-			continue
-		}
-
-		if (dir[0] == 1) && (dir[1] == 0) && (hikingMap[newPoint[0]][newPoint[1]] == SLOPE_UP) {
-			continue
-		} else if (dir[0] == -1) && (dir[1] == 0) && (hikingMap[newPoint[0]][newPoint[1]] == SLOPE_DOWN) {
-			continue
-		} else if (dir[0] == 0) && (dir[1] == -1) && (hikingMap[newPoint[0]][newPoint[1]] == SLOPE_RIGHT) {
-			continue
-		} else if (dir[0] == 0) && (dir[1] == 1) && (hikingMap[newPoint[0]][newPoint[1]] == SLOPE_LEFT) {
 			continue
 		}
 
@@ -152,23 +133,23 @@ func coordToNode(point []int) string {
 }
 
 func addEdges(g *graph.Graph[string, string], hikingMap [][]int) {
-	queue := make([][]int, 0) // [lastX, lastY, currX, currY, cost]
+	queue := make([][]int, 0) // [lastX, lastY, currX, currY, prevX, prevY, cost]
 	startPoint := findStartPoint(hikingMap)
-	queue = append(queue, []int{startPoint[1], startPoint[0], startPoint[1], startPoint[0], 0})
+	queue = append(queue, []int{startPoint[1], startPoint[0], startPoint[1], startPoint[0], startPoint[1], startPoint[0], 0})
 	(*g).AddVertex(coordToNode(startPoint))
 	history := make([][]int, 0)
 
-	lastX := startPoint[1]
-	lastY := startPoint[0]
-	cost := 0
 	for len(queue) > 0 {
 		currEntry := queue[0]
 		queue = queue[1:]
-		lastX = currEntry[0]
-		lastY = currEntry[1]
+
+		lastX := currEntry[0]
+		lastY := currEntry[1]
 		currX := currEntry[2]
 		currY := currEntry[3]
-		cost = currEntry[4]
+		prevX := currEntry[4]
+		prevY := currEntry[5]
+		cost := currEntry[6]
 
 		if currX < 0 || currX >= len(hikingMap) || currY < 0 || currY >= len(hikingMap[0]) {
 			continue
@@ -182,25 +163,35 @@ func addEdges(g *graph.Graph[string, string], hikingMap [][]int) {
 			cost = 0
 		}
 
-		if contains(history, []int{currY, currX}) {
+		if contains(history, []int{currY, currX, prevY, prevX}) {
 			continue
 		}
 
-		history = append(history, []int{currY, currX})
+		history = append(history, []int{currY, currX, prevY, prevX})
 
 		for _, dir := range nextDirections(hikingMap, []int{currY, currX}) {
 			newX := currX + dir[1]
 			newY := currY + dir[0]
-			queue = append(queue, []int{lastX, lastY, newX, newY, cost + 1})
+			if newX == prevX && newY == prevY {
+				continue
+			}
+			queue = append(queue, []int{lastX, lastY, newX, newY, currX, currY, cost + 1})
 		}
 	}
-
-	(*g).AddVertex(coordToNode(findEndPoint(hikingMap)))
-	(*g).AddEdge(coordToNode([]int{lastY, lastX}), coordToNode(findEndPoint(hikingMap)), graph.EdgeWeight(cost))
+	edges, err := (*g).Edges()
+	check(err)
+	for _, edge := range edges {
+		if edge.Properties.Weight == 0 {
+			(*g).RemoveEdge(edge.Source, edge.Target)
+		}
+		if strings.Compare(edge.Source, edge.Target) == 0 {
+			(*g).RemoveEdge(edge.Source, edge.Target)
+		}
+	}
 }
 
 func createGraph(hikingMap [][]int) graph.Graph[string, string] {
-	g := graph.New(graph.StringHash, graph.Weighted(), graph.Acyclic(), graph.Directed())
+	g := graph.New(graph.StringHash, graph.Weighted())
 
 	addEdges(&g, hikingMap)
 
@@ -210,7 +201,11 @@ func createGraph(hikingMap [][]int) graph.Graph[string, string] {
 func contains(history [][]int, point []int) bool {
 	for _, p := range history {
 		if p[0] == point[0] && p[1] == point[1] {
-			return true
+			if len(point) == 2 {
+				return true
+			} else if p[2] == point[2] && p[3] == point[3] {
+				return true
+			}
 		}
 	}
 	return false
@@ -231,11 +226,63 @@ func getMaxLength(g graph.Graph[string, string], startPoint string, endPoint str
 	check(err)
 
 	fmt.Println("Paths:", len(paths))
+	fmt.Println(paths)
 
 	maxLen := 0
 	for _, path := range paths {
 		length := getPathLength(g, path)
 		maxLen = max(maxLen, length)
+	}
+
+	return maxLen
+}
+
+type QueueEntry struct {
+	node string
+	len  map[string]int
+}
+
+func getMaxLenUndirected(g graph.Graph[string, string], startPoint string, endPoint string) int {
+	queue := make([]QueueEntry, 0)
+	maxLen := 0
+	queue = append(queue, QueueEntry{node: startPoint, len: make(map[string]int)})
+
+	adj, err := g.AdjacencyMap()
+	check(err)
+
+	for len(queue) > 0 {
+		// if len(queue) >= 100000 && len(queue)%100000 == 0 {
+		// 	fmt.Print("\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\rQueue:", len(queue))
+		// }
+		currEntry := queue[0]
+		queue = queue[1:]
+
+		for _, edge := range adj[currEntry.node] {
+			if currLen, ok := currEntry.len[edge.Target]; ok || currLen > 142*142 {
+				if currLen > 142*142 {
+					fmt.Println("Too long:", currLen, edge.Source, edge.Target)
+					panic("Too long")
+				}
+				continue
+			}
+
+			nextNode := edge.Target
+			nextLen := currEntry.len[edge.Source] + edge.Properties.Weight
+
+			len := map[string]int{}
+			for k, v := range currEntry.len {
+				len[k] = v
+			}
+
+			len[nextNode] = nextLen
+			queue = append(queue, QueueEntry{node: nextNode, len: len})
+		}
+		if _, ok := currEntry.len[endPoint]; ok {
+			if currEntry.len[endPoint] > maxLen {
+				fmt.Print("\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\rFound: ", currEntry.len[endPoint], " with queue ", len(queue), " and maxLen ", maxLen)
+			}
+			maxLen = max(maxLen, currEntry.len[endPoint])
+		}
 	}
 
 	return maxLen
@@ -286,22 +333,22 @@ func main() {
 
 	g := createGraph(hikingMap)
 
-	numEdges, err := g.Size()
-	check(err)
-	fmt.Println("Edges:", numEdges)
-
-	nodes, err := graph.TopologicalSort(g)
-	check(err)
+	nodes := make([]string, 0)
+	graph.DFS(g, coordToNode(findStartPoint(hikingMap)), func(value string) bool {
+		nodes = append(nodes, value)
+		return false
+	})
 
 	fmt.Println("Nodes:", len(nodes))
-	// printMaze(hikingMap, nodes)
+	printMaze(hikingMap, nodes)
 
-	sum = getMaxLength(g, coordToNode(findStartPoint(hikingMap)), coordToNode(findEndPoint(hikingMap)))
+	// sum = getMaxLength(g, coordToNode(findStartPoint(hikingMap)), coordToNode(findEndPoint(hikingMap)))
+	sum = getMaxLenUndirected(g, coordToNode(findStartPoint(hikingMap)), coordToNode(findEndPoint(hikingMap)))
 
 	// Check for errors during scanning
 	if err := scanner.Err(); err != nil {
 		fmt.Println("Error reading file:", err)
 	}
 
-	fmt.Printf("Sum: %d\n", sum)
+	fmt.Printf("\nSum: %d\n", sum)
 }
