@@ -12,122 +12,80 @@ func check(e error) {
 	}
 }
 
-func handleLine(line string) ([]bool, int) {
-	var result []bool
-	var startPoint = -1
-	for x, c := range line {
-		if c == '#' {
-			result = append(result, false)
-		} else if c == '.' {
-			result = append(result, true)
-		} else if c == 'S' {
-			result = append(result, true)
-			startPoint = x
-		} else {
-			panic("Unknown character")
-		}
-	}
-	return result, startPoint
-}
-
-func findStart(lines [][]bool) [2]int {
-	for y, line := range lines {
+func parseData(data []string) (map[complex128]bool, complex128) {
+	garden := make(map[complex128]bool)
+	var start complex128 = -1
+	for y, line := range data {
 		for x, c := range line {
-			if !c {
-				return [2]int{x, y}
+			if c != '#' {
+				garden[complex(float64(x), float64(y))] = true
+			}
+			if c == 'S' {
+				start = complex(float64(x), float64(y))
 			}
 		}
 	}
-	panic("No start found")
-}
 
-func contains2(history [][2]int, point [2]int) bool {
-	for _, p := range history {
-		if p == point {
-			return true
-		}
+	if start == -1 {
+		panic("No start found!")
 	}
-	return false
+
+	return garden, start
 }
 
-func contains3(history [][3]int, point [3]int) bool {
-	for _, p := range history {
-		if p[0] == point[0] && p[1] == point[1] && p[2] == point[2] {
-			return true
-		}
+func complexMod(num complex128, mod int) complex128 {
+	if float64(int(real(num))) != real(num) && float64(int(imag(num))) != imag(num) {
+		fmt.Println(num, real(num), imag(num))
+		panic("Complex number not integer!")
 	}
-	return false
+	return complex(float64((int(real(num))+10*mod)%mod), float64((int(imag(num))+10*mod)%mod))
 }
 
-func countPossibleSteps(lines [][]bool, stepsLeft int, startPoint [2]int, history [][3]int, endPoints *[][2]int) int {
-	stepsLeftOrig := stepsLeft
-	queue := [][3]int{{startPoint[0], startPoint[1], stepsLeft}}
+func calculateNumEnds(garden map[complex128]bool, start complex128, numIterations int, maxSize int) int {
+	queue := make(map[complex128]bool)
+	queue[start] = true
 
-	var sum = 0
-	for len(queue) > 0 {
-		if len(history)%1000 == 0 {
-			fmt.Printf("\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r%d: %d-%d, %d/%d", len(queue), queue[0][0], queue[0][1], len(history), len(lines)*len(lines[0])*stepsLeftOrig)
+	done := make([]int, 0)
+
+	for i := 0; i < 3*maxSize; i++ {
+		if (i % maxSize) == (maxSize-1)/2 {
+			fmt.Println(i, len(queue))
+			done = append(done, len(queue))
 		}
-		curr := queue[0]
-		queue = queue[1:]
-
-		if curr[2] == 0 {
-			if !contains2(*endPoints, [2]int{curr[0], curr[1]}) {
-				*endPoints = append(*endPoints, [2]int{curr[0], curr[1]})
-			}
-			sum++
-			continue
+		if len(done) == 3 {
+			break
 		}
 
-		dirs := [4][2]int{{0, -1}, {0, 1}, {-1, 0}, {1, 0}}
-		for _, dir := range dirs {
-			x := curr[0] + dir[0]
-			y := curr[1] + dir[1]
+		newQueue := make(map[complex128]bool)
 
-			if x < 0 || y < 0 || x >= len(lines[0]) || y >= len(lines) {
-				continue
+		for _, dir := range []complex128{1, -1, 1i, -1i} {
+			for point := range queue {
+				if _, ok := garden[complexMod(point+dir, maxSize)]; ok {
+					newQueue[point+dir] = true
+				}
 			}
-			if !lines[y][x] {
-				continue
-			}
-
-			if contains3(history, [3]int{x, y, curr[2] - 1}) {
-				continue
-			}
-			history = append(history, [3]int{x, y, curr[2] - 1})
-
-			queue = append(queue, [3]int{x, y, curr[2] - 1})
 		}
+		queue = newQueue
 	}
-	return sum
-}
 
-func removeDuplicates(endPoints [][2]int) [][2]int {
-	var result [][2]int
-	for _, p := range endPoints {
-		if !contains2(result, p) {
-			result = append(result, p)
-		}
+	quadraticFunction := func(n, a, b, c int) int {
+		return a + n*(b-a+((n-1)*(c-2*b+a)/2))
 	}
-	return result
+
+	fmt.Println(numIterations/maxSize, done[0], done[1], done[2])
+	return quadraticFunction(numIterations/maxSize, done[0], done[1], done[2])
 }
 
-func printGarden(lines [][]bool, endPoints [][2]int) {
-	for y, line := range lines {
-		for x, c := range line {
-			if !c {
-				fmt.Print("#")
-			} else if contains2(endPoints, [2]int{x, y}) {
-				fmt.Print("O")
-			} else {
-				fmt.Print(".")
-			}
-		}
-		fmt.Println()
+func assert(a bool, msg string) {
+	if !a {
+		panic("Assertion failed: " + msg)
+		// fmt.Println("Assertion failed: " + msg)
+	} else {
+		fmt.Println("Assertion succeeded: " + msg)
 	}
 }
 
-const PRINT = false
+const PRINT = true
 
 func main() {
 	// Open the file
@@ -142,38 +100,31 @@ func main() {
 	scanner := bufio.NewScanner(file)
 
 	var sum = 0
-	var lines [][]bool
-	var startPointX = -1
-	var startPointY = -1
-	currLine := 0
+	var gardenInput = []string{}
 	// Iterate through each line
 	for scanner.Scan() {
 		line := scanner.Text()
-		lineNew, start := handleLine(line)
-		lines = append(lines, lineNew)
-
-		if start != -1 {
-			startPointX = start
-			startPointY = currLine
-		}
-
-		currLine++
+		gardenInput = append(gardenInput, line)
 	}
 
-	history := [][3]int{}
-	endPoints := [][2]int{}
-	sum = countPossibleSteps(lines, 64, [2]int{startPointX, startPointY}, history, &endPoints)
-	endPoints = removeDuplicates(endPoints)
-	fmt.Println()
+	garden, start := parseData(gardenInput)
+	maxSize := len(gardenInput)
+	fmt.Println("Max size:", maxSize)
+	fmt.Println("Start:", start)
+	fmt.Println("Garden size:", len(garden))
 
-	if PRINT {
-		fmt.Printf("History: %d: %v\n", len(history), history)
-		fmt.Printf("End points: %d: %v\n", len(endPoints), endPoints)
+	// // Tests for 21.ex
+	// assert(calculateNumEnds(garden, start, 6, maxSize) == 16, "Test 1: "+fmt.Sprint((calculateNumEnds(garden, start, 6, maxSize)))+" = "+fmt.Sprint(16))
+	// assert(calculateNumEnds(garden, start, 10, maxSize) == 50, "Test 2: "+fmt.Sprint((calculateNumEnds(garden, start, 10, maxSize)))+" = "+fmt.Sprint(50))
+	// assert(calculateNumEnds(garden, start, 50, maxSize) == 1594, "Test 3: "+fmt.Sprint((calculateNumEnds(garden, start, 50, maxSize)))+" = "+fmt.Sprint(1594))
+	// assert(calculateNumEnds(garden, start, 100, maxSize) == 6536, "Test 4: "+fmt.Sprint((calculateNumEnds(garden, start, 100, maxSize)))+" = "+fmt.Sprint(6536))
+	// assert(calculateNumEnds(garden, start, 500, maxSize) == 167004, "Test 5: "+fmt.Sprint((calculateNumEnds(garden, start, 500, maxSize)))+" = "+fmt.Sprint(167004))
+	// assert(calculateNumEnds(garden, start, 1000, maxSize) == 668697, "Test 6: "+fmt.Sprint((calculateNumEnds(garden, start, 1000, maxSize)))+" = "+fmt.Sprint(668697))
+	// assert(calculateNumEnds(garden, start, 5000, maxSize) == 16733044, "Test 7: "+fmt.Sprint((calculateNumEnds(garden, start, 5000, maxSize)))+" = "+fmt.Sprint(16733044))
 
-		printGarden(lines, endPoints)
-	}
+	sum = calculateNumEnds(garden, start, 26501365, maxSize)
 
-	// sum = len(endPoints)
+	assert(sum == 599763113936220, "Right solution: 599763113936220, got "+fmt.Sprint(sum))
 
 	// Check for errors during scanning
 	if err := scanner.Err(); err != nil {
