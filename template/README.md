@@ -1,0 +1,1 @@
+This is a template for the README.md file that goes with a puzzle. It contains the puzzle description, and a link to the puzzle input data.
