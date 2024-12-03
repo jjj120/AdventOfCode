@@ -15,12 +15,25 @@ func check(e error) {
 }
 
 func handleLine(line string) int {
-	// get all multiply strings in the format "mul\(\d{0,3},\d{0,3}\)"
-	re := regexp.MustCompile(`mul\(\d{1,3},\d{1,3}\)`)
+	re := regexp.MustCompile(`(mul\(\d{1,3},\d{1,3}\))|(do\(\))|(don't\(\))`)
+	re_do := regexp.MustCompile(`do\(\)`)
+	re_dont := regexp.MustCompile(`don't\(\)`)
+
 	matches := re.FindAllString(line, -1)
 
 	res_number := 0
+	do_multiply := true
+
 	for match := range matches {
+		if re_do.MatchString(matches[match]) {
+			do_multiply = true
+			continue
+		}
+		if re_dont.MatchString(matches[match]) {
+			do_multiply = false
+			continue
+		}
+
 		// get the two numbers
 		re_digits := regexp.MustCompile(`\d{1,3}`)
 		numbers := re_digits.FindAllString(matches[match], -1)
@@ -33,16 +46,6 @@ func handleLine(line string) int {
 			}
 		}
 
-		// check if there are two numbers
-		if len(numbers) != 2 {
-			fmt.Println("Error: invalid number of arguments: ", numbers, " in ", matches[match])
-			for i := range numbers {
-				fmt.Println(numbers[i])
-			}
-
-			os.Exit(1)
-		}
-
 		// convert the numbers to integers
 		num1, err := strconv.Atoi(numbers[0])
 		check(err)
@@ -50,7 +53,9 @@ func handleLine(line string) int {
 		check(err)
 
 		// multiply the numbers
-		res_number += num1 * num2
+		if do_multiply {
+			res_number += num1 * num2
+		}
 	}
 
 	return res_number
@@ -69,11 +74,14 @@ func main() {
 	scanner := bufio.NewScanner(file)
 
 	var sum = 0
+	combinedLines := ""
 	// Iterate through each line
 	for scanner.Scan() {
 		line := scanner.Text()
-		sum += handleLine(line)
+		combinedLines += line
 	}
+
+	sum = handleLine(combinedLines)
 
 	// Check for errors during scanning
 	if err := scanner.Err(); err != nil {
