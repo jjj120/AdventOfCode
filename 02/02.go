@@ -23,11 +23,23 @@ func handleLine(line string) int {
 		report[i] = n
 	}
 
-	if checkSafety(report) {
+	if checkSafetyWithOneLess(report) {
 		return 1
 	}
 
 	return 0
+}
+
+func checkSafetyWithOneLess(report []int) bool {
+	for i := 0; i < len(report); i++ {
+		newReport := make([]int, len(report)-1)
+		copy(newReport, report[:i])
+		copy(newReport[i:], report[i+1:])
+		if checkSafety(newReport) {
+			return true
+		}
+	}
+	return false
 }
 
 func checkSafety(report []int) bool {
