@@ -6,7 +6,6 @@ import (
 	"os"
 )
 
-const XMAS = "XMAS"
 const DEBUG = false
 
 var SEARCH_DIRECTIONS = [][]int{
@@ -44,39 +43,46 @@ func countOccurrences(searchArray []string) int {
 	return count
 }
 
-func countAtPosition(searchArray []string, x, y int, searchTerms []string) int {
+func countAtPosition(searchArray []string, x, y int) int {
 	// always search to the right, down, and diagonally to the bottom and top right
 	// always search for both search strings
-	count := 0
-
-	for _, searchTerm := range searchTerms {
-		if searchArray[y][x] != searchTerm[0] {
-			continue
-		}
-
-		for _, direction := range SEARCH_DIRECTIONS {
-			dx := direction[0]
-			dy := direction[1]
-			if searchInDirection(searchArray, x, y, dx, dy, searchTerm) {
-				count++
-			}
-		}
+	if searchArray[y][x] != 'A' {
+		return 0
 	}
 
-	return count
-}
+	if y-1 < 0 || y+1 >= len(searchArray) || x-1 < 0 || x+1 >= len(searchArray[y]) {
+		return 0
+	}
 
-func searchInDirection(searchArray []string, x, y, dx, dy int, searchTerm string) bool {
-	if x+dx*len(searchTerm) > len(searchArray[y]) || y+dy*len(searchTerm) > len(searchArray) || y+dy*len(searchTerm) < -1 || x+dx*len(searchTerm) < -1 {
-		return false
+	// M.M
+	// .A.
+	// S.S
+	if searchArray[y-1][x-1] == 'M' && searchArray[y-1][x+1] == 'M' && searchArray[y+1][x-1] == 'S' && searchArray[y+1][x+1] == 'S' {
+		return 1
 	}
-	searchLen := len(searchTerm)
-	for i := 0; i < searchLen; i++ {
-		if searchArray[y+dy*i][x+dx*i] != searchTerm[i] {
-			return false
-		}
+
+	// M.S
+	// .A.
+	// M.S
+	if searchArray[y-1][x-1] == 'M' && searchArray[y-1][x+1] == 'S' && searchArray[y+1][x-1] == 'M' && searchArray[y+1][x+1] == 'S' {
+		return 1
 	}
-	return true
+
+	// S.M
+	// .A.
+	// S.M
+	if searchArray[y-1][x-1] == 'S' && searchArray[y-1][x+1] == 'M' && searchArray[y+1][x-1] == 'S' && searchArray[y+1][x+1] == 'M' {
+		return 1
+	}
+
+	// S.S
+	// .A.
+	// M.M
+	if searchArray[y-1][x-1] == 'S' && searchArray[y-1][x+1] == 'S' && searchArray[y+1][x-1] == 'M' && searchArray[y+1][x+1] == 'M' {
+		return 1
+	}
+
+	return 0
 }
 
 func main() {
