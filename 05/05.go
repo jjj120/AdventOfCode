@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"slices"
+	"sort"
 	"strconv"
 	"strings"
 )
@@ -53,6 +54,17 @@ func getMiddlePage(pages []int) int {
 	return pages[middleIndex]
 }
 
+func orderPages(pages []int, beforeMap map[int][]int) []int {
+	pages = append([]int(nil), pages...)
+	// pages2 := append([]int(nil), pages...)
+
+	sort.SliceStable(pages, func(i, j int) bool {
+		// i is smaller than j if i is in the beforeMap of j
+		return slices.Contains(beforeMap[pages[j]], pages[i])
+	})
+	return pages
+}
+
 func printMap(m map[int][]int) {
 	for key, value := range m {
 		fmt.Printf("%d -> %v\n", key, value)
@@ -90,9 +102,10 @@ func main() {
 		line := scanner.Text()
 		pages := parsePrintedPageNumbers(line)
 
-		if checkPages(pages, beforeMap) {
+		if !checkPages(pages, beforeMap) {
 			// fmt.Printf("Valid: %v\n", pages)
-			sum += getMiddlePage(pages)
+			ordered := orderPages(pages, beforeMap)
+			sum += getMiddlePage(ordered)
 		}
 	}
 
