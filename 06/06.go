@@ -12,25 +12,59 @@ func check(e error) {
 	}
 }
 
-func countVisited(obstacles [][]bool, start []int) int {
-	currX := start[0]
-	currY := start[1]
-	currDir := "up"
+type posDir struct {
+	x   int
+	y   int
+	dir string
+}
 
-	fmt.Printf("Start at: %d, %d\n", currX, currY)
+func countLoops(obstacles [][]bool, start posDir) int {
+	loopPossibilities := 0
+
+	for obstacleY := 0; obstacleY < len(obstacles[0]); obstacleY++ {
+		for obstacleX := 0; obstacleX < len(obstacles); obstacleX++ {
+			if obstacleX == start.x && obstacleY == start.y {
+				continue
+			}
+			if obstacles[obstacleY][obstacleX] {
+				continue
+			}
+
+			fmt.Printf("Checking %d, %d         \r", obstacleX, obstacleY)
+
+			obstacles[obstacleY][obstacleX] = true
+			_, loop := countVisited(obstacles, start)
+			if loop {
+				loopPossibilities++
+			}
+			obstacles[obstacleY][obstacleX] = false
+		}
+	}
+	fmt.Println("Finished checking")
+	return loopPossibilities
+}
+
+func countVisited(obstacles [][]bool, start posDir) (int, bool) {
+	currPos := start
 
 	visited := make([][]bool, len(obstacles))
 	for i := range visited {
 		visited[i] = make([]bool, len(obstacles[0]))
 	}
 
-	for checkBounds(obstacles, currX, currY) {
-		visited[currY][currX] = true
-		currX, currY, currDir = makeStep(obstacles, currX, currY, currDir)
+	memory := make(map[posDir]bool)
+
+	for checkBounds(obstacles, currPos.x, currPos.y) {
+		if memory[currPos] {
+			return countTrue(visited), true
+		}
+		memory[currPos] = true
+		visited[currPos.y][currPos.x] = true
+		currPos.x, currPos.y, currPos.dir = makeStep(obstacles, currPos.x, currPos.y, currPos.dir)
 	}
 
-	printGameBoard(obstacles, visited, start)
-	return countTrue(visited)
+	// printGameBoard(obstacles, visited, start)
+	return countTrue(visited), false
 }
 
 func countTrue(visited [][]bool) int {
@@ -45,10 +79,10 @@ func countTrue(visited [][]bool) int {
 	return count
 }
 
-func printGameBoard(obstacles, visited [][]bool, start []int) {
+func printGameBoard(obstacles, visited [][]bool, start posDir) {
 	for i, row := range obstacles {
 		for j, v := range row {
-			if i == start[0] && j == start[1] {
+			if i == start.x && j == start.y {
 				fmt.Print("^")
 			} else if v {
 				fmt.Print("#")
@@ -128,7 +162,7 @@ func main() {
 	scanner := bufio.NewScanner(file)
 
 	var obstacles = make([][]bool, 0)
-	var start = make([]int, 2)
+	var start = posDir{0, 0, "up"}
 	// Iterate through each line
 	for scanner.Scan() {
 		line := scanner.Text()
@@ -137,18 +171,24 @@ func main() {
 			if c == '#' {
 				obstacles[len(obstacles)-1][i] = true
 			} else if c == '^' {
-				start[0] = i
-				start[1] = len(obstacles) - 1
+				start.x = i
+				start.y = len(obstacles) - 1
 			}
 		}
 	}
 
-	sum := countVisited(obstacles, start)
+	fmt.Printf("Start: %d, %d\n", start.x, start.y)
+	fmt.Printf("Gameboard size: %d, %d\n", len(obstacles[0]), len(obstacles))
+
+	var sum int
+	sum, _ = countVisited(obstacles, start) // Part 1
+	fmt.Printf("Sum part 1: %d\n", sum)
+
+	sum = countLoops(obstacles, start) // Part 2
+	fmt.Printf("Sum part 2: %d\n", sum)
 
 	// Check for errors during scanning
 	if err := scanner.Err(); err != nil {
 		fmt.Println("Error reading file:", err)
 	}
-
-	fmt.Printf("Sum: %d\n", sum)
 }
