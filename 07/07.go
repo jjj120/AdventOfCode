@@ -48,10 +48,17 @@ func addAndMultiply(totals []int, value int) []int {
 
 	for i := 0; i < totalsLen; i++ {
 		totals = append(totals, totals[i]+value)
+		totals = append(totals, concatonate(totals[i], value))
 		totals[i] *= value
 	}
 
 	return totals
+}
+
+func concatonate(a, b int) int {
+	val, err := strconv.Atoi(strconv.Itoa(a) + strconv.Itoa(b))
+	check(err)
+	return val
 }
 
 func main() {
