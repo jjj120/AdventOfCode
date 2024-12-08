@@ -19,7 +19,7 @@ func handleLine(line string) int {
 
 func main() {
 	// Open the file
-	file, err := os.Open("tmpl.in")
+	file, err := os.Open("tmpl.ex")
 	if err != nil {
 		fmt.Println("Error opening file:", err)
 		return
