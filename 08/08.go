@@ -18,6 +18,13 @@ func assert(t bool, s string) {
 	}
 }
 
+func gcd(a, b int) int {
+	for b != 0 {
+		a, b = b, a%b
+	}
+	return a
+}
+
 type Coord struct {
 	x int
 	y int
@@ -32,6 +39,17 @@ func (a Coord) Add(b Coord) Coord {
 func (a Coord) Sub(b Coord) Coord {
 	a.x -= b.x
 	a.y -= b.y
+	return a
+}
+
+func (a Coord) Abs() Coord {
+	// get absolute value
+	if a.x < 0 {
+		a.x = -a.x
+	}
+	if a.y < 0 {
+		a.y = -a.y
+	}
 	return a
 }
 
@@ -77,21 +95,61 @@ func getResonants(antennaCoords []Coord, fieldSizeX, fieldSizeY int) map[Coord]b
 
 func getResonantsSingle(coord1, coord2 Coord, fieldSizeX, fieldSizeY int) []Coord {
 	diff := coord2.Sub(coord1)
+	resonants := make(map[Coord]bool)
+	resonants[coord1] = true
+	resonants[coord2] = true
 
-	resonants := []Coord{
-		coord1.Sub(diff),
-		coord2.Add(diff),
-	}
+	diff = reduceVector(diff) // reduce the vector to the smallest one possible
 
-	resonantsClean := make([]Coord, 0)
-	for _, resonant := range resonants {
-		if resonant.x < 0 || resonant.x >= fieldSizeX || resonant.y < 0 || resonant.y >= fieldSizeY {
+	currCoord := coord1
+
+	// add until we reach the end of the field or a loop
+	for {
+		coordNew := currCoord.Add(diff)
+		currCoord = coordNew
+		if coordNew == coord2 {
 			continue
 		}
-		resonantsClean = append(resonantsClean, resonant)
+		if coordNew.x < 0 || coordNew.y < 0 || coordNew.x >= fieldSizeX || coordNew.y >= fieldSizeY {
+			break
+		}
+		if resonants[coordNew] {
+			break
+		}
+		resonants[coordNew] = true
 	}
 
-	return resonantsClean
+	currCoord = coord1
+	// subtract until we reach the start of the field or a loop
+	for {
+		coordNew := currCoord.Sub(diff)
+		currCoord = coordNew
+		if coordNew.x < 0 || coordNew.y < 0 || coordNew.x >= fieldSizeX || coordNew.y >= fieldSizeY {
+			break
+		}
+		if resonants[coordNew] {
+			break
+		}
+		resonants[coordNew] = true
+	}
+
+	return resonantsToSlice(resonants)
+}
+
+func resonantsToSlice(resonants map[Coord]bool) []Coord {
+	resonantsSlice := make([]Coord, 0, len(resonants))
+	for resonant := range resonants {
+		resonantsSlice = append(resonantsSlice, resonant)
+	}
+	return resonantsSlice
+}
+
+func reduceVector(c Coord) Coord {
+	g := gcd(c.x, c.y)
+	return Coord{
+		x: c.x / g,
+		y: c.y / g,
+	}
 }
 
 func PrintResonants(antennas map[rune][]Coord, resonants map[Coord]bool, fieldSizeX, fieldSizeY int) {
@@ -161,10 +219,6 @@ func main() {
 	if err := scanner.Err(); err != nil {
 		fmt.Println("Error reading file:", err)
 	}
-
-	assert(sum < 317, "Test failed, result should not be 317 or bigger")
-	assert(sum < 311, "Test failed, result should not be 311 or bigger")
-	assert(sum < 306, "Test failed, result should not be 306 or bigger")
 
 	fmt.Printf("Sum: %d\n", sum)
 }
