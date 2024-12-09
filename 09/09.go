@@ -4,7 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"os"
-	"strconv"
+	"strings"
 )
 
 func check(e error) {
@@ -13,95 +13,97 @@ func check(e error) {
 	}
 }
 
-func handleLine(line string) int {
-	expanded := expandLine(line)
-	// printFormatted(expanded)
+type file struct {
+	index  int
+	length int
+	empty  bool
+}
 
-	shifted := shiftDown(expanded)
-	// printFormatted(shifted)
-	saveToFile(shifted)
+func (f file) copy() file {
+	return file{index: f.index, length: f.length, empty: f.empty}
+}
+
+func handleLine(line string) int {
+	files := make([]file, 0, len(line))
+	for i, c := range line {
+		files = append(files, file{index: i / 2, length: int(c - '0'), empty: i%2 == 1})
+	}
+
+	shifted := shiftDown(files)
+
 	return calcChecksum(shifted)
 }
 
-func expandLine(line string) []int {
-	expanded := []int{}
-	for i := 0; i < len(line); i++ {
-		length, err := strconv.Atoi(string(line[i]))
-		check(err)
+func shiftDown(files []file) []file {
+	for i := len(files) - 1; i > 0; i-- {
+		if files[i].empty {
+			continue
+		}
 
-		if i%2 == 0 {
-			// file
-			for j := 0; j < length; j++ {
-				expanded = append(expanded, i/2)
-			}
-		} else {
-			// free
-			for j := 0; j < length; j++ {
-				expanded = append(expanded, -1)
-			}
+		emptyIndex := firstEmptyFit(files[:i], files[i])
+		if emptyIndex == -1 { // No empty file fits, no need to shift
+			continue
+		}
+
+		fileToShift := files[i].copy()
+		files[i].empty = true // Empty the file
+
+		files[emptyIndex].length -= fileToShift.length
+		// Shift the files
+		files = append(files[:emptyIndex], append([]file{fileToShift}, files[emptyIndex:]...)...)
+
+		if emptyIndex < i {
+			i++
 		}
 	}
-	return expanded
+	return files
 }
 
-func shiftDown(line []int) []int {
-	shifted := make([]int, 0, len(line))
-
-	for i := 0; i < len(line); i++ {
-		if line[i] == -1 {
-			for j := len(line) - 1; j > 0; j-- {
-				// delete the last element if it is -1
-				if j <= i {
-					return shifted
-				}
-				if line[j] == -1 {
-					line = line[:j]
-				} else {
-					break
-				}
-			}
-
-			shifted = append(shifted, line[len(line)-1])
-			line = line[:len(line)-1]
-		} else {
-			shifted = append(shifted, line[i])
+func firstEmptyFit(files []file, fitFile file) int {
+	for i, f := range files {
+		if f.empty && f.length >= fitFile.length {
+			return i
 		}
 	}
-	return shifted
+	return -1
 }
 
-func calcChecksum(line []int) int {
+func calcChecksum(files []file) int {
+	line := makeArray(files)
 	sum := 0
-	for i := 0; i < len(line); i++ {
-		sum += i * line[i]
+	for i, num := range line {
+		if num != -1 {
+			sum += i * num
+		}
 	}
 	return sum
 }
 
-func printFormatted(line []int) {
-	for i := 0; i < len(line); i++ {
-		if line[i] == -1 {
-			fmt.Print(".")
+func makeArray(files []file) []int {
+	line := make([]int, 0, len(files)*2)
+	for _, f := range files {
+		for j := 0; j < f.length; j++ {
+			if f.empty {
+				line = append(line, -1)
+			} else {
+				line = append(line, f.index)
+			}
+		}
+	}
+	return line
+}
+
+func printFormatted(files []file) {
+	for _, f := range files {
+		if f.empty {
+			fmt.Print(strings.Repeat(".", f.length))
 		} else {
-			fmt.Print(line[i])
+			for i := 0; i < f.length; i++ {
+				fmt.Print(f.index)
+			}
 		}
 	}
 	fmt.Println()
-}
-
-func saveToFile(line []int) {
-	f, err := os.Create("output.txt")
-	check(err)
-	defer f.Close()
-
-	for i := 0; i < len(line); i++ {
-		if line[i] == -1 {
-			f.WriteString(".")
-		} else {
-			f.WriteString(strconv.Itoa(line[i]))
-		}
-	}
-	f.WriteString("\n")
 }
 
 func main() {
