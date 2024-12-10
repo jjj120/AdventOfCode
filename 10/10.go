@@ -30,8 +30,7 @@ func countTrailheads(topoMap [][]int) int {
 		for x := 0; x < len(topoMap[0]); x++ {
 			if topoMap[y][x] == 0 {
 				// found a trail start
-				reachablesNew := getReachable(topoMap, x, y)
-				sum += len(reachablesNew)
+				sum += countReachable(topoMap, x, y)
 			}
 		}
 	}
@@ -74,6 +73,31 @@ func getReachable(topoMap [][]int, x, y int) map[point]bool {
 	}
 
 	return toReturn
+}
+
+func countReachable(topoMap [][]int, x, y int) int {
+	if x < 0 || y < 0 || x >= len(topoMap[0]) || y >= len(topoMap) {
+		return 0
+	}
+	if topoMap[y][x] == 9 {
+		return 1
+	}
+	count := 0
+
+	if y > 0 && topoMap[y-1][x] == topoMap[y][x]+1 {
+		count += countReachable(topoMap, x, y-1)
+	}
+	if y < len(topoMap)-1 && topoMap[y+1][x] == topoMap[y][x]+1 {
+		count += countReachable(topoMap, x, y+1)
+	}
+	if x > 0 && topoMap[y][x-1] == topoMap[y][x]+1 {
+		count += countReachable(topoMap, x-1, y)
+	}
+	if x < len(topoMap[0])-1 && topoMap[y][x+1] == topoMap[y][x]+1 {
+		count += countReachable(topoMap, x+1, y)
+	}
+
+	return count
 }
 
 func main() {
