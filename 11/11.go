@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"math"
 	"os"
 	"strconv"
 	"strings"
@@ -23,42 +24,55 @@ func handleLine(line string) int {
 		check(err)
 	}
 
-	blinkNumber := 25
+	blinkNumber := 75
+
+	numbersAmount := map[int]int{}
+
+	for _, n := range numbers {
+		numbersAmount[n]++
+	}
 
 	for range blinkNumber {
-		numbers = blink(numbers)
-		// fmt.Printf("Blink %d: %v\n", i+1, numbers)
+		numbersAmount = blink(numbersAmount)
 	}
-	return len(numbers)
+	sum := 0
+	for _, amount := range numbersAmount {
+		sum += amount
+	}
+	return sum
 }
 
-func blink(numbers []int) []int {
-	for i := 0; i < len(numbers); i++ {
-		if numbers[i] == 0 {
-			numbers[i] = 1
-		} else if evenDigits(numbers[i]) {
-			left, right := splitNumber(numbers[i])
-			numbers = append(numbers[:i], append([]int{left, right}, numbers[i+1:]...)...)
-			i++
+func blink(numbers map[int]int) map[int]int {
+	numbersNew := make(map[int]int)
+
+	for num, amount := range numbers {
+		if num == 0 {
+			numbersNew[1] += amount
+		} else if even, dig := evenDigits(num); even {
+			left, right := splitNumber(num, dig)
+			numbersNew[left] += amount
+			numbersNew[right] += amount
 		} else {
-			numbers[i] *= 2024
+			numbersNew[num*2024] += amount
 		}
 	}
-	return numbers
+	return numbersNew
 }
 
-func evenDigits(n int) bool {
-	nStr := strconv.Itoa(n)
-	return len(nStr)%2 == 0
+func evenDigits(n int) (bool, int) {
+	digits := 0
+	for n > 0 {
+		n /= 10
+		digits++
+	}
+	return digits%2 == 0, digits
 }
 
-func splitNumber(n int) (int, int) {
-	nStr := strconv.Itoa(n)
-	middle := len(nStr) / 2
-	left, err := strconv.Atoi(nStr[:middle])
-	check(err)
-	right, err := strconv.Atoi(nStr[middle:])
-	check(err)
+func splitNumber(n int, digits int) (int, int) {
+	half := digits / 2
+	divisor := int(math.Pow(10, float64(half)))
+	right := n % divisor
+	left := n / divisor
 	return left, right
 }
 
