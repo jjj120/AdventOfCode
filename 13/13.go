@@ -4,8 +4,6 @@ import (
 	"bufio"
 	"fmt"
 	"os"
-
-	"gonum.org/v1/gonum/mat"
 )
 
 func check(e error) {
@@ -17,6 +15,10 @@ func check(e error) {
 type Vec2d struct {
 	x int
 	y int
+}
+
+func isInteger(f float64) bool {
+	return f == float64(int(f))
 }
 
 type Machine struct {
@@ -33,9 +35,12 @@ func (m Machine) Print() {
 
 const TOKEN_BUTTON_A = 3
 const TOKEN_BUTTON_B = 1
+const CONVERSION_ADDITION = 10000000000000
 
 func handleLine(lines []string) int {
 	machine := parseMachine(lines)
+	// fmt.Println("")
+	// machine.Print()
 
 	return calcPrizeCost(machine)
 }
@@ -65,6 +70,10 @@ func parseMachine(lines []string) Machine {
 		fmt.Printf("Error parsing Price of line %s\n", lines[2])
 	}
 
+	// add conversion factor to the prize
+	machine.prize.x += CONVERSION_ADDITION
+	machine.prize.y += CONVERSION_ADDITION
+
 	return machine
 }
 
@@ -72,34 +81,25 @@ func calcPrizeCost(machine Machine) int {
 	btnA := machine.moveA
 	btnB := machine.moveB
 	prize := machine.prize
-	var (
-		A = mat.NewDense(2, 2, []float64{float64(btnA.x), float64(btnB.x), float64(btnA.y), float64(btnB.y)})
-		b = mat.NewDense(2, 1, []float64{float64(prize.x), float64(prize.y)})
-		x = mat.NewDense(2, 1, nil)
-	)
 
-	// Solve for x such that Ax = b
-	var qr mat.QR
-	qr.Factorize(A)
+	a1 := btnA.x
+	a2 := btnA.y
+	b1 := btnB.x
+	b2 := btnB.y
+	p1 := prize.x
+	p2 := prize.y
 
-	err := qr.SolveTo(x, false, b)
-	if err != nil {
-		fmt.Printf("could not solve QR: %+v", err)
-	}
+	x1 := float64(b2*p1-p2*b1) / float64(a1*b2-a2*b1)
+	x2 := float64(a1*p2-p1*a2) / float64(a1*b2-a2*b1)
 
 	// check if the solution is integer (round and check if it is equal to the original)
-	roundedX := mat.NewDense(2, 1, nil)
-	roundedX.Apply(func(i, j int, v float64) float64 {
-		return float64(int(v + 0.5))
-	}, x)
-
-	if !mat.EqualApprox(roundedX, x, 1e-6) {
-		// fmt.Printf("Solution is not integer: \n%v\n", mat.Formatted(x))
+	if !isInteger(x1) || !isInteger(x2) {
+		// fmt.Printf("Solution is not integer: \n%.3f, %.3f\n", x1, x2)
 		return 0
 	}
 
-	cost := int(roundedX.At(0, 0))*TOKEN_BUTTON_A + int(roundedX.At(1, 0))*TOKEN_BUTTON_B
-	// fmt.Printf("%.3f\n", mat.Formatted(x))
+	cost := int(x1*TOKEN_BUTTON_A) + int(x2*TOKEN_BUTTON_B)
+	// fmt.Printf("%.3f, %.3f\n", x1, x2)
 	// fmt.Printf("Cost: %d\n", cost)
 
 	return cost
