@@ -4,11 +4,13 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"slices"
 )
 
 const EMPTY = 0
 const WALL = 1
-const BOX = 2
+const BOX_LEFT = 2
+const BOX_RIGHT = 3
 
 const UP = 0
 const DOWN = 1
@@ -54,13 +56,17 @@ func handleLine(line string, index int) []int {
 		switch c {
 		case '.':
 			row = append(row, EMPTY)
+			row = append(row, EMPTY)
 		case '#':
 			row = append(row, WALL)
+			row = append(row, WALL)
 		case 'O':
-			row = append(row, BOX)
+			row = append(row, BOX_LEFT)
+			row = append(row, BOX_RIGHT)
 		case '@':
 			row = append(row, EMPTY)
-			start = Coord{i, index}
+			row = append(row, EMPTY)
+			start = Coord{i * 2, index}
 		default:
 			panic("Invalid character in input file")
 		}
@@ -69,6 +75,7 @@ func handleLine(line string, index int) []int {
 }
 
 func doMoves(gamefield [][]int, moves []int, robotPos Coord) ([][]int, Coord) {
+	// printGamefield(gamefield, robotPos)
 	for _, move := range moves {
 		gamefield, robotPos = doMove(gamefield, move, robotPos)
 		// printMove(move)
@@ -79,106 +86,77 @@ func doMoves(gamefield [][]int, moves []int, robotPos Coord) ([][]int, Coord) {
 }
 
 func doMove(gamefield [][]int, move int, robotPos Coord) ([][]int, Coord) {
-	if move == UP {
-		switch gamefield[robotPos.y-1][robotPos.x] {
-		case EMPTY:
-			return gamefield, Coord{robotPos.x, robotPos.y - 1}
-		case BOX:
-			for i := robotPos.y - 1; i >= 0; i-- {
-				if gamefield[i][robotPos.x] == BOX {
-					continue
-				}
-				if gamefield[i][robotPos.x] == EMPTY {
-					gamefield[i][robotPos.x] = BOX
-					gamefield[robotPos.y-1][robotPos.x] = EMPTY
-					return gamefield, Coord{robotPos.x, robotPos.y - 1}
-				}
-				if gamefield[i][robotPos.x] == WALL {
-					return gamefield, robotPos
-				}
-			}
-		case WALL:
+	var offset Coord
+
+	switch move {
+	case UP:
+		offset = Coord{0, -1}
+	case DOWN:
+		offset = Coord{0, 1}
+	case LEFT:
+		offset = Coord{-1, 0}
+	case RIGHT:
+		offset = Coord{1, 0}
+	}
+
+	targets := []Coord{Coord{robotPos.x, robotPos.y}}
+
+	if gamefield[robotPos.y+offset.y][robotPos.x+offset.x] == WALL {
+		// cannot move
+		return gamefield, robotPos
+	}
+
+	for targetIndex := 0; targetIndex < len(targets); targetIndex++ {
+		target := targets[targetIndex]
+
+		nextCoord := Coord{target.x + offset.x, target.y + offset.y}
+
+		if slices.Contains(targets, nextCoord) {
+			// ignore targets that have already been found
+			continue
+		}
+
+		if gamefield[nextCoord.y][nextCoord.x] == WALL {
+			// cannot move
 			return gamefield, robotPos
+		}
+
+		if gamefield[nextCoord.y][nextCoord.x] == BOX_LEFT {
+			// add box to targets
+			targets = append(targets, nextCoord)
+			nextCoord.x++
+			targets = append(targets, nextCoord)
+		}
+		if gamefield[nextCoord.y][nextCoord.x] == BOX_RIGHT {
+			// add box to targets
+			targets = append(targets, nextCoord)
+			nextCoord.x--
+			targets = append(targets, nextCoord)
 		}
 	}
 
-	if move == DOWN {
-		switch gamefield[robotPos.y+1][robotPos.x] {
-		case EMPTY:
-			return gamefield, Coord{robotPos.x, robotPos.y + 1}
-		case BOX:
-			for i := robotPos.y + 1; i < len(gamefield); i++ {
-				if gamefield[i][robotPos.x] == BOX {
-					continue
-				}
-				if gamefield[i][robotPos.x] == EMPTY {
-					gamefield[i][robotPos.x] = BOX
-					gamefield[robotPos.y+1][robotPos.x] = EMPTY
-					return gamefield, Coord{robotPos.x, robotPos.y + 1}
-				}
-				if gamefield[i][robotPos.x] == WALL {
-					return gamefield, robotPos
-				}
-			}
-		case WALL:
-			return gamefield, robotPos
-		}
+	newGamefield := make([][]int, len(gamefield))
+	for i, row := range gamefield {
+		newGamefield[i] = make([]int, len(row))
+		copy(newGamefield[i], row)
 	}
 
-	if move == LEFT {
-		switch gamefield[robotPos.y][robotPos.x-1] {
-		case EMPTY:
-			return gamefield, Coord{robotPos.x - 1, robotPos.y}
-		case BOX:
-			for i := robotPos.x - 1; i >= 0; i-- {
-				if gamefield[robotPos.y][i] == BOX {
-					continue
-				}
-				if gamefield[robotPos.y][i] == EMPTY {
-					gamefield[robotPos.y][i] = BOX
-					gamefield[robotPos.y][robotPos.x-1] = EMPTY
-					return gamefield, Coord{robotPos.x - 1, robotPos.y}
-				}
-				if gamefield[robotPos.y][i] == WALL {
-					return gamefield, robotPos
-				}
-			}
-		case WALL:
-			return gamefield, robotPos
-		}
+	for _, target := range targets {
+		newGamefield[target.y][target.x] = EMPTY
 	}
 
-	if move == RIGHT {
-		switch gamefield[robotPos.y][robotPos.x+1] {
-		case EMPTY:
-			return gamefield, Coord{robotPos.x + 1, robotPos.y}
-		case BOX:
-			for i := robotPos.x + 1; i < len(gamefield[robotPos.y]); i++ {
-				if gamefield[robotPos.y][i] == BOX {
-					continue
-				}
-				if gamefield[robotPos.y][i] == EMPTY {
-					gamefield[robotPos.y][i] = BOX
-					gamefield[robotPos.y][robotPos.x+1] = EMPTY
-					return gamefield, Coord{robotPos.x + 1, robotPos.y}
-				}
-				if gamefield[robotPos.y][i] == WALL {
-					return gamefield, robotPos
-				}
-			}
-		case WALL:
-			return gamefield, robotPos
-		}
+	for _, target := range targets {
+		newGamefield[target.y+offset.y][target.x+offset.x] = gamefield[target.y][target.x]
 	}
 
-	panic("Invalid move: " + string(move))
+	return newGamefield, Coord{robotPos.x + offset.x, robotPos.y + offset.y}
 }
 
 func calcGPS(gamefield [][]int) int {
 	gps := 0
 	for y, row := range gamefield {
 		for x, cell := range row {
-			if cell == BOX {
+			if cell == BOX_LEFT {
 				gps += y*100 + x
 			}
 		}
@@ -198,8 +176,10 @@ func printGamefield(gamefield [][]int, robotPos Coord) {
 				fmt.Print(" ")
 			case WALL:
 				fmt.Print(ColorRed, "█", ColorReset)
-			case BOX:
-				fmt.Print(BGYellow, "O", ColorReset)
+			case BOX_LEFT:
+				fmt.Print(BGYellow, "[", ColorReset)
+			case BOX_RIGHT:
+				fmt.Print(BGYellow, "]", ColorReset)
 			}
 		}
 		fmt.Println()
