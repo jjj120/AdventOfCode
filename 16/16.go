@@ -54,6 +54,8 @@ type RobotPosition struct {
 	direction int
 }
 
+type Path []Coord
+
 type LabyrinthCost [][][4]int
 
 func (l LabyrinthCost) print() {
@@ -67,7 +69,7 @@ func (l LabyrinthCost) print() {
 	}
 }
 
-func printCost(cost LabyrinthCost, lab Labyrinth) {
+func printCost(cost LabyrinthCost, lab Labyrinth, bestTiles map[Coord]bool) {
 	for y, line := range cost {
 		for x, costArr := range line {
 			minCost := min(costArr[0], costArr[1], costArr[2], costArr[3])
@@ -81,6 +83,10 @@ func printCost(cost LabyrinthCost, lab Labyrinth) {
 			}
 			if lab[y][x] == END {
 				fmt.Printf("%s%6d%s ", BGRed, minCost, ColorReset)
+				continue
+			}
+			if bestTiles[Coord{x, y}] {
+				fmt.Printf("%s%6d%s ", BGYellow, minCost, ColorReset)
 				continue
 			}
 			fmt.Printf("%6d ", minCost)
@@ -100,6 +106,17 @@ func (l LabyrinthCost) setCost(coord RobotPosition, cost int) {
 func (l LabyrinthCost) getMinCost(coord Coord) int {
 	costs := l[coord.y][coord.x]
 	return min(costs[0], costs[1], costs[2], costs[3])
+}
+
+func (l LabyrinthCost) getMinCostIdx(coord Coord) int {
+	costs := l[coord.y][coord.x]
+	minimum := min(costs[0], costs[1], costs[2], costs[3])
+	for i, cost := range costs {
+		if cost == minimum {
+			return i
+		}
+	}
+	return -1
 }
 
 type Labyrinth []string
@@ -200,6 +217,14 @@ func findStartEnd(labyrinth Labyrinth) (start, end Coord) {
 	return start, end
 }
 
+func copyMap(m map[Coord]bool) map[Coord]bool {
+	newMap := make(map[Coord]bool)
+	for k, v := range m {
+		newMap[k] = v
+	}
+	return newMap
+}
+
 func findCheapestPath(labyrinth Labyrinth, start, end Coord) int {
 	cellCosts := make(LabyrinthCost, len(labyrinth))
 	for i := range cellCosts {
@@ -216,6 +241,10 @@ func findCheapestPath(labyrinth Labyrinth, start, end Coord) int {
 	}
 
 	cellCosts.setCost(RobotPosition{start, RIGHT}, 0) // the start cell has a cost of 0 to get to itself
+
+	bestPaths := make(map[RobotPosition]map[Coord]bool)
+	bestPaths[RobotPosition{start, RIGHT}] = make(map[Coord]bool)
+	bestPaths[RobotPosition{start, RIGHT}][start] = true
 
 	queue := make([]RobotPosition, 0, 200)
 	queue = append(queue, RobotPosition{start, RIGHT})
@@ -248,17 +277,29 @@ func findCheapestPath(labyrinth Labyrinth, start, end Coord) int {
 			if neighbourCost < cellCosts.getCost(neighbour) {
 				cellCosts.setCost(neighbour, neighbourCost)
 				queue = append(queue, RobotPosition{neighbour.coord, neighbour.direction})
+				// Reset the best paths to the neighbour
+				bestPaths[neighbour] = copyMap(bestPaths[current])
+				bestPaths[neighbour][neighbour.coord] = true
+
+			}
+			if neighbourCost == cellCosts.getCost(neighbour) {
+				// Add the current path to the best paths to the neighbour
+				for k := range bestPaths[current] {
+					bestPaths[neighbour][k] = true
+				}
 			}
 		}
 	}
-
-	printCost(cellCosts, labyrinth)
 
 	if cellCosts.getMinCost(end) == INT_MAX {
 		panic("No path found")
 	}
 
-	return cellCosts.getMinCost(end)
+	bestTiles := bestPaths[RobotPosition{end, cellCosts.getMinCostIdx(end)}]
+
+	printCost(cellCosts, labyrinth, bestTiles)
+
+	return len(bestTiles)
 }
 
 func main() {
