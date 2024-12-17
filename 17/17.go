@@ -81,9 +81,23 @@ func parseProgram(line string) []Instruction {
 	return program
 }
 
+func parseIntToProgram(line []int) []Instruction {
+	var program []Instruction
+
+	if len(line)%2 != 0 {
+		return program // invalid program
+	}
+
+	for i := 0; i < len(line); i += 2 {
+		program = append(program, Instruction{line[i], line[i+1]})
+	}
+
+	return program
+}
+
 func executeProgram(program []Instruction, registers Registers) []int {
-	fmt.Printf("Registers: %v\n", registers)
-	fmt.Printf("Program: %v\n", program)
+	debugPrintf("Registers: %v\n", registers)
+	debugPrintf("Program: %v\n", program)
 	output := []int{}
 
 	for pc := 0; pc < len(program); pc++ { // pc points to the instruction index, not the memory address
@@ -110,7 +124,6 @@ func executeProgram(program []Instruction, registers Registers) []int {
 			registers.b = registers.b ^ registers.c
 		case opcode_out:
 			debugPrintf("OUT: %d -- %d\n", combo, combo%8)
-			fmt.Printf("%d,", combo%8)
 			output = append(output, combo%8)
 		case opcode_bdv:
 			debugPrintf("BDV: %d -- %d / %d = %d -> regB\n", combo, registers.a, 1<<combo, registers.a/(1<<combo))
@@ -120,14 +133,6 @@ func executeProgram(program []Instruction, registers Registers) []int {
 			registers.c = registers.a / (1 << combo)
 		}
 	}
-	fmt.Println("")
-	// join output
-	outString := ""
-	for _, o := range output {
-		outString += fmt.Sprintf("%d,", o)
-	}
-	outString = outString[:len(outString)-1]
-	fmt.Println(outString)
 	return output
 }
 
@@ -146,6 +151,47 @@ func getComboOperand(combo int, registers Registers) int {
 		operand = combo
 	}
 	return operand
+}
+
+func findAinput(registers Registers, program []Instruction) int {
+	matchFound := 1
+	for a := 1; ; a++ {
+		registers.a = a
+		output := executeProgram(program, registers)
+
+		matching, matchingNum := checkProgramEquality(program, parseIntToProgram(output))
+		if matching {
+			fmt.Printf("%16d %16o -- matching: %2d -- %s\n", a, a, matchingNum, programToString(parseIntToProgram(output)))
+			return a
+		}
+		if matchingNum > matchFound {
+			fmt.Printf("%16d %16o -- matching: %2d -- %s\n", a, a, matchingNum, programToString(parseIntToProgram(output)))
+			matchFound = matchingNum
+			a *= 64 // shift up by two numbers
+		}
+	}
+}
+
+func programToString(program []Instruction) string {
+	str := ""
+	for _, instr := range program {
+		str += fmt.Sprintf("%d,%d,", instr.opcode, instr.arg)
+	}
+	return str
+}
+
+func checkProgramEquality(program1, program2 []Instruction) (bool, int) {
+	matchingNum := 0
+	matching := true
+	for i := 1; i <= len(program1) && i <= len(program2); i++ {
+		if program1[len(program1)-i].opcode != program2[len(program2)-i].opcode || program1[len(program1)-i].arg != program2[len(program2)-i].arg {
+			return false, matchingNum
+		} else {
+			matchingNum++
+		}
+	}
+
+	return matching && matchingNum == len(program1) && matchingNum == len(program2), matchingNum
 }
 
 func main() {
@@ -174,7 +220,7 @@ func main() {
 	scanner.Scan()
 	program := parseProgram(scanner.Text())
 
-	executeProgram(program, registers)
+	sum = findAinput(registers, program)
 
 	// Check for errors during scanning
 	if err := scanner.Err(); err != nil {
