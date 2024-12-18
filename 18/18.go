@@ -114,13 +114,13 @@ func main() {
 		coords = append(coords, handleLine(line))
 	}
 
-	for i := 0; i < len(coords); i++ {
+	for i := len(coords) - 1; i >= 0; i-- {
 		if i%100 == 0 {
 			fmt.Printf("Processing %d-th of %d obstacle\r", i, len(coords))
 		}
 		sum = findShortestPathLength(coords[:i+1], Coord{0, 0}, Coord{FIELD_SIZE - 1, FIELD_SIZE - 1})
-		if sum == INT_MAX {
-			fmt.Printf("No path found for %v obstacle                            \n", coords[i])
+		if sum != INT_MAX {
+			fmt.Printf("Path found for %d,%d obstacle                            \n", coords[i+1].x, coords[i+1].y)
 			break
 		}
 	}
@@ -130,5 +130,5 @@ func main() {
 		fmt.Println("Error reading file:", err)
 	}
 
-	fmt.Printf("Sum: %d\n", sum)
+	// fmt.Printf("Sum: %d\n", sum)
 }
