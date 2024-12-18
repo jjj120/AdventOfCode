@@ -31,8 +31,8 @@ func findShortestPathLength(obstaclesLst []Coord, start, end Coord) int {
 		obstacles[obstacle] = true
 	}
 
-	fmt.Printf("Length: %d\n", len(obstaclesLst))
-	printObstacles(obstacles)
+	// fmt.Printf("Length: %d\n", len(obstaclesLst))
+	// printObstacles(obstacles)
 
 	queue := make([]Coord, 0, 50)
 	queue = append(queue, start)
@@ -72,16 +72,26 @@ func findShortestPathLength(obstaclesLst []Coord, start, end Coord) int {
 
 func printObstacles(obstacles map[Coord]bool) {
 	fmt.Printf("Obstacles:\n")
+	for x := 0; x < FIELD_SIZE+2; x++ {
+		ColorPrint(RGBtoAnsiEscapeString(0, 0, 127, true), UNICODE_BLOCK)
+	}
+	fmt.Println()
 	for y := 0; y < FIELD_SIZE; y++ {
+		ColorPrint(RGBtoAnsiEscapeString(0, 0, 127, true), UNICODE_BLOCK)
 		for x := 0; x < FIELD_SIZE; x++ {
 			if _, ok := obstacles[Coord{x, y}]; ok {
-				fmt.Print("X")
+				ColorPrint(RGBtoAnsiEscapeString(0x66, 0x33, 0x99, true), UNICODE_BLOCK)
 			} else {
 				fmt.Print(".")
 			}
 		}
+		ColorPrint(RGBtoAnsiEscapeString(0, 0, 127, true), UNICODE_BLOCK)
 		fmt.Println()
 	}
+	for x := 0; x < FIELD_SIZE+2; x++ {
+		ColorPrint(RGBtoAnsiEscapeString(0, 0, 127, true), UNICODE_BLOCK)
+	}
+	fmt.Println()
 }
 
 func main() {
@@ -97,20 +107,23 @@ func main() {
 	scanner := bufio.NewScanner(file)
 
 	var sum = 0
-	num := 0
 	coords := make([]Coord, 0, 50)
 	// Iterate through each line
 	for scanner.Scan() {
 		line := scanner.Text()
 		coords = append(coords, handleLine(line))
-		num++
-		// if num >= 12 {
-		if num >= 1024 {
+	}
+
+	for i := 0; i < len(coords); i++ {
+		if i%100 == 0 {
+			fmt.Printf("Processing %d-th of %d obstacle\r", i, len(coords))
+		}
+		sum = findShortestPathLength(coords[:i+1], Coord{0, 0}, Coord{FIELD_SIZE - 1, FIELD_SIZE - 1})
+		if sum == INT_MAX {
+			fmt.Printf("No path found for %v obstacle                            \n", coords[i])
 			break
 		}
 	}
-
-	sum = findShortestPathLength(coords, Coord{0, 0}, Coord{FIELD_SIZE - 1, FIELD_SIZE - 1})
 
 	// Check for errors during scanning
 	if err := scanner.Err(); err != nil {
