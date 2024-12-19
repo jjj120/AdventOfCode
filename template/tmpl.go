@@ -6,6 +6,18 @@ import (
 	"os"
 )
 
+func assert(condition bool, message string) {
+	if !condition {
+		panic(message)
+	}
+}
+
+func assertf(condition bool, message string, args ...interface{}) {
+	if !condition {
+		panic(fmt.Sprintf(message, args...))
+	}
+}
+
 func check(e error) {
 	if e != nil {
 		panic(e)
