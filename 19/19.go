@@ -23,29 +23,19 @@ func parseTowels(line string) ([]string, map[byte][]string) {
 }
 
 func checkTowel(towelToCheck string, towels map[byte][]string) int {
-	queue := []string{towelToCheck}
-	alreadyChecked := make(map[string]bool)
+	possArray := make([]int, len(towelToCheck)+1)
+	// save the number of possibilities for each index
+	possArray[0] = 1
 
-	for len(queue) > 0 {
-		currTowelToCheck := queue[0]
-		queue = queue[1:]
-
-		for _, towel := range towels[currTowelToCheck[0]] {
-			if strings.HasPrefix(currTowelToCheck, towel) {
-				if len(currTowelToCheck) == len(towel) {
-					return 1
-				}
-
-				if alreadyChecked[currTowelToCheck[len(towel):]] {
-					continue
-				}
-
-				alreadyChecked[currTowelToCheck[len(towel):]] = true
-				queue = append(queue, currTowelToCheck[len(towel):])
+	for idxToCheck := 0; idxToCheck < len(towelToCheck); idxToCheck++ {
+		towelsLst := towels[towelToCheck[idxToCheck]]
+		for _, towel := range towelsLst {
+			if strings.HasPrefix(towelToCheck[idxToCheck:], towel) {
+				possArray[idxToCheck+len(towel)] += possArray[idxToCheck]
 			}
 		}
 	}
-	return 0
+	return possArray[len(possArray)-1]
 }
 
 func main() {
@@ -67,15 +57,24 @@ func main() {
 	scanner.Scan() // Skip empty line
 
 	var sum = 0
+	numLines := 0
 	// Iterate through each line
 	for scanner.Scan() {
 		line := scanner.Text()
+		numLines++
 		sum += checkTowel(line, towelsMap)
+
+		// fmt.Printf("Line: %s, Possibilities: %d\n", line, checkTowel(line, towelsMap))
 	}
 
 	// Check for errors during scanning
 	if err := scanner.Err(); err != nil {
 		fmt.Println("Error reading file:", err)
+	}
+
+	if sum <= 29271194035771 {
+		fmt.Println("Incorrect sum 29271194035771")
+		return
 	}
 
 	fmt.Printf("Sum: %d\n", sum)
