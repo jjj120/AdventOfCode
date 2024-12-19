@@ -22,10 +22,39 @@ func (c Coord) getAdjacent() []Coord {
 	}
 }
 
+type Matrix3x3 [3][3]bool
+
+func (m Matrix3x3) AndAll() bool {
+	for i := 0; i < 3; i++ {
+		for j := 0; j < 3; j++ {
+			if !m[i][j] {
+				return false
+			}
+		}
+	}
+	return true
+}
+
+func (m Matrix3x3) At(x, y int) bool {
+	assert(x >= 0 && x < 3, "x out of bounds for At")
+	assert(y >= 0 && y < 3, "y out of bounds for At")
+	return m[y][x]
+}
+
+func (m Matrix3x3) AtCentered(x, y int) bool {
+	assert(x >= -1 && x <= 1, "x out of bounds for AtCentered")
+	assert(y >= -1 && y <= 1, "y out of bounds for AtCentered")
+	return m[y+1][x+1]
+}
+
 type GardenMap struct {
 	width    int
 	height   int
 	plantMap map[Coord]string
+}
+
+func (g GardenMap) CheckBounds(c Coord) bool {
+	return c.x >= 0 && c.x < g.width && c.y >= 0 && c.y < g.height
 }
 
 func check(e error) {
@@ -65,8 +94,10 @@ func calcFenceCost(gardenMap GardenMap) int {
 			if alreadyVisited[currCoord] {
 				continue
 			}
-			a, p := calcAreaPerimeterFromPosition(currCoord, gardenMap, &alreadyVisited)
-			debugPrintf("From %v (%s): Area: %d, Perimeter: %d\n", currCoord, string(gardenMap.plantMap[currCoord]), a, p)
+			thisArea := map[Coord]bool{}
+			a, _ := calcAreaPerimeterFromPosition(currCoord, gardenMap, &alreadyVisited, &thisArea)
+			p := calculateAreaPerimeter(thisArea)
+			debugPrintf("From %v (%s): Area: %d, Perimeter: %d -> Cost: %d\n", currCoord, string(gardenMap.plantMap[currCoord]), a, p, a*p)
 			cost += a * p
 		}
 	}
@@ -74,7 +105,88 @@ func calcFenceCost(gardenMap GardenMap) int {
 	return cost
 }
 
-func calcAreaPerimeterFromPosition(currCoord Coord, gardenMap GardenMap, alreadyVisited *map[Coord]bool) (int, int) {
+func calculateAreaPerimeter(area map[Coord]bool) int {
+	debugPrintf("Area: %v\n", area)
+
+	corners := map[Coord]int{}
+
+	for point := range area {
+		currCorners := countCorner(point, area)
+		if currCorners > 0 {
+			corners[point] = currCorners
+		}
+	}
+
+	sum := 0
+	for _, v := range corners {
+		sum += v
+	}
+
+	debugPrintf("Corners: %v\n", corners)
+	return sum
+}
+
+func countCorner(point Coord, area map[Coord]bool) int {
+	cornersMatrix := Matrix3x3{
+		{false, false, false},
+		{false, false, false},
+		{false, false, false},
+	}
+
+	for y := -1; y <= 1; y++ {
+		for x := -1; x <= 1; x++ {
+			currCoord := Coord{x: point.x + x, y: point.y + y}
+			if _, ok := area[currCoord]; ok {
+				cornersMatrix[y+1][x+1] = true
+			}
+		}
+	}
+
+	debugPrintf("Corners matrix for %v: %v\n", point, cornersMatrix)
+
+	if cornersMatrix.AndAll() {
+		// Grid full, point in the middle
+		debugPrintf("Grid full\n")
+		return 0
+	}
+
+	corners := 0
+	dirs := []Coord{
+		{x: 0, y: -1},
+		{x: 1, y: 0},
+		{x: 0, y: 1},
+		{x: -1, y: 0},
+	}
+
+	// check for outward corners
+	for i := 0; i < 4; i++ {
+		dir1 := dirs[i]
+		dir2 := dirs[(i+1)%4]
+		if !cornersMatrix.AtCentered(dir1.x, dir1.y) && !cornersMatrix.AtCentered(dir2.x, dir2.y) {
+			corners++
+		}
+	}
+
+	dirs = []Coord{
+		{x: -1, y: -1},
+		{x: 1, y: -1},
+		{x: 1, y: 1},
+		{x: -1, y: 1},
+	}
+
+	// check for inward corners
+	for _, dir := range dirs {
+		dirUpDown := Coord{x: 0, y: dir.y}
+		dirLeftRight := Coord{x: dir.x, y: 0}
+		if !cornersMatrix.AtCentered(dir.x, dir.y) && cornersMatrix.AtCentered(dirUpDown.x, dirUpDown.y) && cornersMatrix.AtCentered(dirLeftRight.x, dirLeftRight.y) {
+			corners++
+		}
+	}
+
+	return corners
+}
+
+func calcAreaPerimeterFromPosition(currCoord Coord, gardenMap GardenMap, alreadyVisited *map[Coord]bool, areaCoords *map[Coord]bool) (int, int) {
 	// returns area, perimeter
 	if _, ok := (*alreadyVisited)[currCoord]; ok {
 		// debugPringf("Already visited %v\n", currCoord)
@@ -83,6 +195,7 @@ func calcAreaPerimeterFromPosition(currCoord Coord, gardenMap GardenMap, already
 	}
 
 	(*alreadyVisited)[currCoord] = true
+	(*areaCoords)[currCoord] = true
 
 	if _, ok := gardenMap.plantMap[currCoord]; !ok {
 		debugPrintf("No plant at %v\n", currCoord)
@@ -104,7 +217,7 @@ func calcAreaPerimeterFromPosition(currCoord Coord, gardenMap GardenMap, already
 					perimeter++
 				} else {
 					debugPrintf("Same plant at %v as at %v\n", adj, currCoord)
-					a, p := calcAreaPerimeterFromPosition(adj, gardenMap, alreadyVisited)
+					a, p := calcAreaPerimeterFromPosition(adj, gardenMap, alreadyVisited, areaCoords)
 					area += a
 					perimeter += p
 				}
