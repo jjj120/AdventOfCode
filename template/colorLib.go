@@ -97,7 +97,7 @@ const (
 	ANSI_BRIGHT_WHITE_BG   = 107
 )
 
-func RGBtoAnsiEscapeString(r, g, b int, fg bool) string {
+func RGBtoAnsiEscapeString(r, g, b uint8, fg bool) string {
 	if fg {
 		return fmt.Sprintf("\033[%d;2;%d;%d;%dm", ANSI_SET_FOREGROUND_COLOR, r, g, b)
 	} else {
@@ -105,7 +105,7 @@ func RGBtoAnsiEscapeString(r, g, b int, fg bool) string {
 	}
 }
 
-func Color8BitToAnsiEscapeString(color int, fg bool) string {
+func Color8BitToAnsiEscapeString(color uint8, fg bool) string {
 	if fg {
 		return fmt.Sprintf("\033[%d;5;%dm", ANSI_SET_FOREGROUND_COLOR, color)
 	} else {
@@ -113,7 +113,7 @@ func Color8BitToAnsiEscapeString(color int, fg bool) string {
 	}
 }
 
-func ConstantToAnsiEscapeString(constant int) string {
+func ConstantToAnsiEscapeString(constant uint8) string {
 	return fmt.Sprintf("%s%d%s", ANSI_ESCAPE, constant, ANSI_END)
 }
 
@@ -171,11 +171,11 @@ func HSLtoRGB(h, s, l float64) (r, g, b uint8) {
 }
 
 type TerminalColor struct {
-	r, g, b int
+	r, g, b uint8
 	fg      bool
 }
 
-func NewTerminalColor(r, g, b int, fg bool) TerminalColor {
+func NewTerminalColor(r, g, b uint8, fg bool) TerminalColor {
 	return TerminalColor{r, g, b, fg}
 }
 
