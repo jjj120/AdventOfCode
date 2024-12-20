@@ -118,11 +118,13 @@ func abs(x int) int {
 func checkCheatsFromPoint(costs map[Coord]int, point Coord) map[int]int {
 	saveMap := map[int]int{}
 
-	for dx := -2; dx <= 2; dx++ {
-		for dy := -2; dy <= 2; dy++ {
+	maxCheatCost := 20
+
+	for dx := -maxCheatCost; dx <= maxCheatCost; dx++ {
+		for dy := -maxCheatCost; dy <= maxCheatCost; dy++ {
 			shortcutCost := abs(dx) + abs(dy)
 
-			if shortcutCost != 2 {
+			if shortcutCost > maxCheatCost || shortcutCost == 0 {
 				continue
 			}
 
