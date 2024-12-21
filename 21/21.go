@@ -29,38 +29,60 @@ func check(e error) {
 	}
 }
 
-type NumericalKeypad struct {
-	curr rune
+type CacheEntry struct {
+	code  string
+	robot int
 }
 
-type DirectionKeypad struct {
-	curr rune
-}
-
-func handleLine(line string) int {
+func handleLine(line string, robots int, cache map[CacheEntry]int) int {
 	numericalValue, err := strconv.Atoi(line[:len(line)-1])
 	check(err)
 	// fmt.Printf("Numerical value: %d\n", numericalValue)
 
-	code := line
+	code := expandCodeNumericalKeypad(line)
 
-	numKeypad := NumericalKeypad{'A'}
-	dirKeypad1 := DirectionKeypad{'A'}
-	dirKeypad2 := DirectionKeypad{'A'}
+	length := calcLengthAtLevel(code, cache, 0, robots)
 
-	code = numKeypad.expandCodeNumericalKeypad(code)
-	// fmt.Printf("%s 1: %d %s\n", line, len(code), code)
-	code = dirKeypad1.expandCodeDirectionKeypad(code)
-	// fmt.Printf("%s 2: %d %s\n", line, len(code), code)
-	code = dirKeypad2.expandCodeDirectionKeypad(code)
-	// fmt.Printf("%s 3: %d %s\n", line, len(code), code)
+	fmt.Printf("%s: %d\n", line, length)
 
-	fmt.Printf("%s: %d %s\n", line, len(code), code)
-
-	return len(code) * numericalValue
+	return length * numericalValue
 }
 
-func (k *NumericalKeypad) expandCodeNumericalKeypad(code string) string {
+func calcLengthAtLevel(code string, cache map[CacheEntry]int, robotNumBefore, maxRobots int) int {
+	codeExtended := expandCodeDirectionKeypad(code)
+
+	if robotNumBefore == maxRobots {
+		return len(code)
+	}
+
+	length := 0
+	for _, curr := range splitOnA(codeExtended) {
+		cacheEntry := CacheEntry{curr, robotNumBefore + 1}
+		if _, ok := cache[cacheEntry]; ok {
+			length += cache[cacheEntry]
+			continue
+		}
+		count := calcLengthAtLevel(curr, cache, robotNumBefore+1, maxRobots)
+		length += count
+	}
+
+	cache[CacheEntry{code, robotNumBefore}] = length
+	return length
+}
+
+func splitOnA(code string) []string {
+	splits := make([]string, 0)
+	start := 0
+	for i, c := range code {
+		if c == 'A' {
+			splits = append(splits, code[start:i+1])
+			start = i + 1
+		}
+	}
+	return splits
+}
+
+func expandCodeNumericalKeypad(code string) string {
 	// Keypad matrix:
 	// 7 8 9
 	// 4 5 6
@@ -69,12 +91,13 @@ func (k *NumericalKeypad) expandCodeNumericalKeypad(code string) string {
 	// starting at A
 
 	expanded := ""
+	curr := 'A'
 	for i := 0; i < len(code); i++ {
-		from := k.curr
+		from := curr
 		to := rune(code[i])
 		expanded += numericalFromTo(from, to)
 		expanded += "A"
-		k.curr = to
+		curr = to
 	}
 
 	return expanded
@@ -122,35 +145,32 @@ func numericalFromTo(from, to rune) string {
 	}
 
 	xDiff = toCoord.x - fromCoord.x
-	yDiff = toCoord.y - fromCoord.y
 
 	// Priority: < over ^ over v over >
-
 	if fromCoord.y == 3 && toCoord.x == 0 {
 		return vertical + horizontal
 	} else if fromCoord.x == 0 && toCoord.y == 3 {
 		return horizontal + vertical
 	} else if xDiff < 0 {
 		return horizontal + vertical
-	} else if xDiff >= 0 {
+	} else {
 		return vertical + horizontal
 	}
-
-	panic("Invalid direction")
 }
 
-func (k *DirectionKeypad) expandCodeDirectionKeypad(code string) string {
+func expandCodeDirectionKeypad(code string) string {
 	// Keypad matrix:
 	// x ^ A
 	// < v >
 
 	expanded := ""
+	curr := 'A'
 	for i := 0; i < len(code); i++ {
-		from := k.curr
+		from := curr
 		to := rune(code[i])
 		expanded += directionFromTo(from, to)
 		expanded += "A"
-		k.curr = to
+		curr = to
 	}
 
 	return expanded
@@ -192,20 +212,17 @@ func directionFromTo(from, to rune) string {
 	}
 
 	xDiff = toCoord.x - fromCoord.x
-	yDiff = toCoord.y - fromCoord.y
 
 	// Priority: < over ^ over v over >
-	if fromCoord.y == 1 && toCoord.y == 1 {
+	if fromCoord.x == 0 && toCoord.y == 0 {
 		return horizontal + vertical
 	} else if fromCoord.y == 0 && toCoord.x == 0 {
 		return vertical + horizontal
 	} else if xDiff < 0 {
 		return horizontal + vertical
-	} else if xDiff >= 0 {
+	} else {
 		return vertical + horizontal
 	}
-
-	panic("Invalid direction")
 }
 
 func main() {
@@ -221,10 +238,12 @@ func main() {
 	scanner := bufio.NewScanner(file)
 
 	var sum = 0
+	const robots = 25
+	cache := make(map[CacheEntry]int)
 	// Iterate through each line
 	for scanner.Scan() {
 		line := scanner.Text()
-		sum += handleLine(line)
+		sum += handleLine(line, robots, cache)
 	}
 
 	// Check for errors during scanning
@@ -233,5 +252,8 @@ func main() {
 	}
 
 	fmt.Printf("Sum: %d\n", sum)
-	assert(sum == 213536, "Sum wrong")
+	assert(sum != 211498201171116, "Answer is not correct")
+	assert(sum != 1449630236257308, "Answer is not correct")
+	assert(sum != 553709479156924, "Answer is not correct")
+	// assert(sum == 213536 || sum == 258369757013802, "Answer is not correct")
 }
