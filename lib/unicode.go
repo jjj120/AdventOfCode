@@ -1,0 +1,25 @@
+package lib
+
+const (
+	UNICODE_BLOCK                         = "█"
+	UNICODE_CIRCLE                        = "⏺"
+	UNICODE_MIDDLE_DOT                    = "·"
+	UNICODE_WHITE_CIRCLE                  = "○"
+	UNICODE_BLACK_CIRCLE                  = "●"
+	UNICODE_WHITE_SQUARE                  = "□"
+	UNICODE_BLACK_SQUARE                  = "■"
+	UNICODE_WHITE_TRIANGLE                = "△"
+	UNICODE_BLACK_TRIANGLE                = "▲"
+	UNICODE_WHITE_UP_POINTING_TRIANGLE    = "▵"
+	UNICODE_BLACK_UP_POINTING_TRIANGLE    = "▴"
+	UNICODE_WHITE_DOWN_POINTING_TRIANGLE  = "▿"
+	UNICODE_BLACK_DOWN_POINTING_TRIANGLE  = "▾"
+	UNICODE_WHITE_LEFT_POINTING_TRIANGLE  = "◁"
+	UNICODE_BLACK_LEFT_POINTING_TRIANGLE  = "◂"
+	UNICODE_WHITE_RIGHT_POINTING_TRIANGLE = "▷"
+	UNICODE_BLACK_RIGHT_POINTING_TRIANGLE = "▸"
+	UNICODE_WHITE_DIAMOND                 = "◇"
+	UNICODE_BLACK_DIAMOND                 = "◆"
+	UNICODE_WHITE_LOZENGE                 = "◊"
+	UNICODE_BLACK_LOZENGE                 = "◈"
+)
