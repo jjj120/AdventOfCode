@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"slices"
+	"sort"
 	"strings"
 )
 
@@ -93,6 +94,72 @@ func sort3Slice(a [3]string) [3]string {
 	return a
 }
 
+// BronKerbosch algorithm to find maximal cliques
+func BronKerbosch(R, P, X []string, graph map[string][]string, cliques *[][]string) {
+	if len(P) == 0 && len(X) == 0 {
+		// Found a maximal clique
+		*cliques = append(*cliques, append([]string{}, R...))
+		return
+	}
+
+	for _, v := range P {
+		newR := append(R, v)
+		newP := intersect(P, graph[v])
+		newX := intersect(X, graph[v])
+		BronKerbosch(newR, newP, newX, graph, cliques)
+
+		// Move v from P to X
+		P = remove(P, v)
+		X = append(X, v)
+	}
+}
+
+// Helper function to find intersection of two slices
+func intersect(slice1, slice2 []string) []string {
+	set := make(map[string]bool)
+	for _, val := range slice2 {
+		set[val] = true
+	}
+	intersection := []string{}
+	for _, val := range slice1 {
+		if set[val] {
+			intersection = append(intersection, val)
+		}
+	}
+	return intersection
+}
+
+// Helper function to remove an element from a slice
+func remove(slice []string, elem string) []string {
+	newSlice := []string{}
+	for _, val := range slice {
+		if val != elem {
+			newSlice = append(newSlice, val)
+		}
+	}
+	return newSlice
+}
+
+// Function to find the largest clique
+func findLargestClique(graph map[string][]string) []string {
+	var cliques [][]string
+	vertices := []string{}
+	for v := range graph {
+		vertices = append(vertices, v)
+	}
+
+	BronKerbosch([]string{}, vertices, []string{}, graph, &cliques)
+
+	// Find the largest clique
+	largestClique := []string{}
+	for _, clique := range cliques {
+		if len(clique) > len(largestClique) {
+			largestClique = clique
+		}
+	}
+	return largestClique
+}
+
 func main() {
 	// Open the file
 	file, err := os.Open("23.in")
@@ -105,7 +172,6 @@ func main() {
 	// Create a scanner to read the file line by line
 	scanner := bufio.NewScanner(file)
 
-	var sum = 0
 	connections := make(map[string][]string)
 	// Iterate through each line
 	for scanner.Scan() {
@@ -115,13 +181,15 @@ func main() {
 		connections[p2] = append(connections[p2], p1)
 	}
 
-	// fmt.Printf("Connections: %v\n", connections)
-	sum = coundThreeWithStart(connections, "t")
+	clique := findLargestClique(connections)
+
+	sortedClique := sort.StringSlice(clique)
+	sortedClique.Sort()
+	password := strings.Join(sortedClique, ",")
+	fmt.Printf("Password: %s\n", password)
 
 	// Check for errors during scanning
 	if err := scanner.Err(); err != nil {
 		fmt.Println("Error reading file:", err)
 	}
-
-	fmt.Printf("Sum: %d\n", sum)
 }
