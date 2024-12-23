@@ -7,6 +7,8 @@ import (
 	"slices"
 	"sort"
 	"strings"
+
+	"github.com/Tom-Johnston/mamba/graph"
 )
 
 func assert(condition bool, message string) {
@@ -94,67 +96,58 @@ func sort3Slice(a [3]string) [3]string {
 	return a
 }
 
-// BronKerbosch algorithm to find maximal cliques
-func BronKerbosch(R, P, X []string, graph map[string][]string, cliques *[][]string) {
-	if len(P) == 0 && len(X) == 0 {
-		// Found a maximal clique
-		*cliques = append(*cliques, append([]string{}, R...))
-		return
+func findLargestClique(connections map[string][]string) []string {
+	nodeNumber := 0
+	nodeNumbers := make(map[string]int)
+	nodeNames := make(map[int]string)
+	for p1 := range connections {
+		nodeNumbers[p1] = nodeNumber
+		nodeNames[nodeNumber] = p1
+		nodeNumber++
 	}
 
-	for _, v := range P {
-		newR := append(R, v)
-		newP := intersect(P, graph[v])
-		newX := intersect(X, graph[v])
-		BronKerbosch(newR, newP, newX, graph, cliques)
+	edges := make([]byte, (nodeNumber*(nodeNumber-1))/2)
 
-		// Move v from P to X
-		P = remove(P, v)
-		X = append(X, v)
-	}
-}
+	for p1, conns := range connections {
+		for _, p2 := range conns {
+			var i, j int
+			if nodeNumbers[p1] < nodeNumbers[p2] {
+				i = nodeNumbers[p1]
+				j = nodeNumbers[p2]
+			} else if nodeNumbers[p1] > nodeNumbers[p2] {
+				i = nodeNumbers[p2]
+				j = nodeNumbers[p1]
+			} else {
+				// same node
+				continue
+			}
 
-// Helper function to find intersection of two slices
-func intersect(slice1, slice2 []string) []string {
-	set := make(map[string]bool)
-	for _, val := range slice2 {
-		set[val] = true
-	}
-	intersection := []string{}
-	for _, val := range slice1 {
-		if set[val] {
-			intersection = append(intersection, val)
+			pos := (j*(j-1))/2 + i
+
+			edges[pos] = 1
 		}
 	}
-	return intersection
-}
 
-// Helper function to remove an element from a slice
-func remove(slice []string, elem string) []string {
-	newSlice := []string{}
-	for _, val := range slice {
-		if val != elem {
-			newSlice = append(newSlice, val)
-		}
-	}
-	return newSlice
-}
+	// using graph package: https://github.com/Tom-Johnston/mamba/blob/master/graph
+	editGraph := graph.NewDense(nodeNumber, edges)
 
-// Function to find the largest clique
-func findLargestClique(graph map[string][]string) []string {
-	var cliques [][]string
-	vertices := []string{}
-	for v := range graph {
-		vertices = append(vertices, v)
+	channels := make(chan []int)
+	go graph.AllMaximalCliques(editGraph, channels)
+
+	cliques := make([][]int, 0)
+	for clique := range channels {
+		cliques = append(cliques, clique)
 	}
 
-	BronKerbosch([]string{}, vertices, []string{}, graph, &cliques)
-
-	// Find the largest clique
 	largestClique := []string{}
+	largestCliqueSize := 0
 	for _, clique := range cliques {
-		if len(clique) > len(largestClique) {
-			largestClique = clique
+		if len(clique) > largestCliqueSize {
+			largestClique = []string{}
+			for _, node := range clique {
+				largestClique = append(largestClique, nodeNames[node])
+			}
+			largestCliqueSize = len(clique)
 		}
 	}
 	return largestClique
@@ -181,12 +174,15 @@ func main() {
 		connections[p2] = append(connections[p2], p1)
 	}
 
+	sum := coundThreeWithStart(connections, "t")
+	fmt.Printf("Part 1: %d\n", sum)
+
 	clique := findLargestClique(connections)
 
 	sortedClique := sort.StringSlice(clique)
 	sortedClique.Sort()
 	password := strings.Join(sortedClique, ",")
-	fmt.Printf("Password: %s\n", password)
+	fmt.Printf("Part 2: %s\n", password)
 
 	// Check for errors during scanning
 	if err := scanner.Err(); err != nil {
