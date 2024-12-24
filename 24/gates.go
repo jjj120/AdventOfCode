@@ -7,6 +7,9 @@ func checkVal(val string, gatesOutput map[string]Gate) bool {
 
 type Gate interface {
 	compute(gatesOutput map[string]Gate) int
+	invalidateCache()
+	getInputs() []string
+	Type() string
 }
 
 type AndGate struct {
@@ -31,6 +34,18 @@ func (g *AndGate) compute(gatesOutput map[string]Gate) int {
 	return g.cachedOutput
 }
 
+func (g *AndGate) invalidateCache() {
+	g.outputValid = false
+}
+
+func (g *AndGate) getInputs() []string {
+	return []string{g.input1, g.input2}
+}
+
+func (g *AndGate) Type() string {
+	return "AND"
+}
+
 type OrGate struct {
 	input1       string
 	input2       string
@@ -51,6 +66,18 @@ func (g *OrGate) compute(gatesOutput map[string]Gate) int {
 	}
 	g.cachedOutput = gatesOutput[g.input1].compute(gatesOutput) | gatesOutput[g.input2].compute(gatesOutput)
 	return g.cachedOutput
+}
+
+func (g *OrGate) invalidateCache() {
+	g.outputValid = false
+}
+
+func (g *OrGate) getInputs() []string {
+	return []string{g.input1, g.input2}
+}
+
+func (g *OrGate) Type() string {
+	return "OR"
 }
 
 type XOrGate struct {
@@ -75,10 +102,34 @@ func (g *XOrGate) compute(gatesOutput map[string]Gate) int {
 	return g.cachedOutput
 }
 
+func (g *XOrGate) invalidateCache() {
+	g.outputValid = false
+}
+
+func (g *XOrGate) getInputs() []string {
+	return []string{g.input1, g.input2}
+}
+
+func (g *XOrGate) Type() string {
+	return "XOR"
+}
+
 type ConstGate struct {
 	value int
 }
 
 func (g ConstGate) compute(gatesOutput map[string]Gate) int {
 	return g.value
+}
+
+func (g ConstGate) invalidateCache() {
+	// do nothing
+}
+
+func (g ConstGate) getInputs() []string {
+	return []string{}
+}
+
+func (g ConstGate) Type() string {
+	return "CONST"
 }
