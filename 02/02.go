@@ -11,21 +11,34 @@ import (
 const day = 02
 const selectExample = false
 
-func checkValid(id string) bool {
-	if len(id)%2 != 0 {
-		return false
+func checkInvalid(id string) bool {
+	for l := 1; l <= len(id)/2; l++ {
+		if len(id)%l != 0 {
+			continue
+		}
+
+		numElements := len(id) / l
+		prevElement := id[:l]
+
+		equal := true
+		for i := range numElements {
+			if prevElement != id[i*l:(i+1)*l] {
+				equal = false
+				break
+			}
+		}
+		if equal {
+			return true
+		}
 	}
-
-	firstHalf := id[:len(id)/2]
-	secondHalf := id[len(id)/2:]
-
-	return firstHalf == secondHalf
+	return false
 }
 
 func sumInvalidIDs(start int, end int) int {
 	sum := 0
 	for i := start; i <= end; i++ {
-		if checkValid(strconv.Itoa(i)) {
+		if checkInvalid(strconv.Itoa(i)) {
+			fmt.Printf("Found invalid id %d\n", i)
 			sum += i
 		}
 	}
@@ -59,6 +72,6 @@ func main() {
 
 	fmt.Printf("Sum: %d\n", sum)
 	if selectExample {
-		aoc.Assert(sum == 1227775554, "example solution wrong")
+		aoc.Assert(sum == 4174379265, "example solution wrong")
 	}
 }
