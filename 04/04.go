@@ -26,7 +26,7 @@ func checkMovable(rollsMap [][]bool, x, y int) bool {
 	return adjRolls < 5 // +1 because we count the roll itself too
 }
 
-func countAccess(rollsMap [][]bool) int {
+func countAccess(rollsMap [][]bool) (int, [][]bool) {
 	movable := 0
 	movableMap := make([][]bool, 0, len(rollsMap))
 	for y, line := range rollsMap {
@@ -42,22 +42,30 @@ func countAccess(rollsMap [][]bool) int {
 		movableMap = append(movableMap, movableLine)
 	}
 	printMap(rollsMap, movableMap)
-	return movable
+	return movable, movableMap
 }
 func printMap(rollsMap [][]bool, movableMap [][]bool) {
 	for y, line := range rollsMap {
 		for x, e := range line {
 			if e && movableMap[y][x] {
 				// movable roll
-				aoc.ColorPrint(aoc.ConstantToAnsiEscapeString(aoc.ANSI_BRIGHT_GREEN_FG), "@ ")
+				aoc.ColorPrint(aoc.ConstantToAnsiEscapeString(aoc.ANSI_GREEN_FG), "@ ")
 			} else if e {
 				// not movable roll
-				aoc.ColorPrint(aoc.ConstantToAnsiEscapeString(aoc.ANSI_BRIGHT_RED_FG), "@ ")
+				aoc.ColorPrint(aoc.ConstantToAnsiEscapeString(aoc.ANSI_RED_FG), "@ ")
 			} else {
 				fmt.Printf(". ")
 			}
 		}
 		fmt.Println()
+	}
+}
+
+func removeMovableRolls(rollsMap [][]bool, movableMap [][]bool) {
+	for y, line := range rollsMap {
+		for x, e := range line {
+			rollsMap[y][x] = e && !movableMap[y][x]
+		}
 	}
 }
 
@@ -70,7 +78,20 @@ func handleLines(lines []string) int {
 		}
 		paperRolls = append(paperRolls, paperRollLine)
 	}
-	return countAccess(paperRolls)
+	removable := 0
+	accesses, movableMap := countAccess(paperRolls)
+	for accesses > 0 {
+		removable += accesses
+		removeMovableRolls(paperRolls, movableMap)
+
+		fmt.Printf("\n---------------------------------------------------------------------------------------\n")
+		fmt.Printf("Next iteration:\n")
+		fmt.Printf("---------------------------------------------------------------------------------------\n")
+
+		accesses, movableMap = countAccess(paperRolls)
+		fmt.Printf("--> %d elements accessable\n", accesses)
+	}
+	return removable
 }
 
 func main() {
@@ -81,6 +102,6 @@ func main() {
 
 	fmt.Printf("Sum: %d\n", sum)
 	if selectExample {
-		aoc.Assert(sum == 13, "Example solution wrong")
+		aoc.Assert(sum == 43, "Example solution wrong")
 	}
 }
