@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"strconv"
+	"math"
 	"strings"
 
 	aoc "github.com/jjj120/AdventOfCode/lib"
@@ -16,44 +16,64 @@ func calcSolution(inputs [][]int, ops []string) int {
 	for i, op := range ops {
 		sum := 0
 		if op == "+" {
-			for _, line := range inputs {
-				sum += line[i]
+			for _, elem := range inputs[i] {
+				sum += elem
 			}
 		} else if op == "*" {
 			sum = 1
-			for _, line := range inputs {
-				sum *= line[i]
+			for _, elem := range inputs[i] {
+				sum *= elem
 			}
 		} else {
 			aoc.Assert(1 == 0, "Got unknown op!")
+		}
+		if selectExample {
+			fmt.Println(sum)
 		}
 		totalSum += sum
 	}
 	return totalSum
 }
 
+func powInt(a int, b int) int {
+	return int(math.Pow(float64(a), float64(b)))
+}
+
 func handleLines(lines []string) int {
-	inputs := make([][]int, 0, 10)
-	ops := make([]string, 0, 10)
+	ops := strings.Fields(lines[len(lines)-1])
+	numCols := len(strings.Fields(lines[0]))
+
+	inputs := make([][]int, numCols)
+	maxLen := 0
+	for i := range inputs {
+		inputs[i] = make([]int, 0, 10)
+	}
 	for _, line := range lines {
-		if line[0] != '+' && line[0] != '*' {
-			// number line
-			splitLines := strings.Fields(line)
-			intLines := make([]int, len(splitLines))
-			for i, s := range splitLines {
-				parsed, err := strconv.Atoi(s)
-				aoc.Check(err)
-				intLines[i] = parsed
-			}
-			inputs = append(inputs, intLines)
-		} else {
-			// op line
-			splitLines := strings.Fields(line)
-			for _, s := range splitLines {
-				ops = append(ops, s)
+		maxLen = max(maxLen, len(line))
+	}
+
+	colIndex := 0
+
+	for i := range maxLen {
+		currNumbers := make([]int, 0, 5)
+		for _, line := range lines[:len(lines)-1] {
+			if i < len(line) && line[i] != ' ' {
+				currNumbers = append(currNumbers, int(line[i]-'0'))
 			}
 		}
+		if len(currNumbers) > 0 {
+			// there was a number
+			currNumber := 0
+			for digInd, num := range currNumbers {
+				currNumber += num * powInt(10, len(currNumbers)-digInd-1)
+			}
+
+			inputs[colIndex] = append(inputs[colIndex], currNumber)
+		} else {
+			colIndex++
+		}
 	}
+
 	if selectExample {
 		fmt.Printf("%v\n", inputs)
 		fmt.Printf("%v\n", ops)
@@ -70,6 +90,6 @@ func main() {
 
 	fmt.Printf("Sum: %d\n", sum)
 	if selectExample {
-		aoc.Assert(sum == 4277556, "Example is wrong!")
+		aoc.Assert(sum == 3263827, "Example is wrong!")
 	}
 }
