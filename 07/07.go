@@ -9,9 +9,47 @@ import (
 const day = 07
 const selectExample = false
 
+func runBeamRec(lines []string, start aoc.Vec2d, cache *map[aoc.Vec2d]int) int {
+	currEntry := start
+	if val, ok := (*cache)[currEntry]; ok {
+		return val
+	}
+
+	if lines[currEntry.Y][currEntry.X] == 'S' || lines[currEntry.Y][currEntry.X] == '.' {
+		// empty space --> just move down
+		currEntry.Y++
+		if currEntry.Y < len(lines) {
+			currTimelines := runBeamRec(lines, currEntry, cache)
+
+			currEntry.Y--
+			(*cache)[currEntry] = currTimelines
+			return currTimelines
+		}
+	} else if lines[currEntry.Y][currEntry.X] == '^' {
+		// splitter --> add new entry at x+1 and x-1
+		currTimelinesSum := 0
+		if currEntry.X+1 < len(lines[0]) {
+			currTimelines := runBeamRec(lines, aoc.Vec2d{X: currEntry.X + 1, Y: currEntry.Y}, cache)
+			(*cache)[aoc.Vec2d{X: currEntry.X + 1, Y: currEntry.Y}] = currTimelines
+			currTimelinesSum += currTimelines
+		}
+		if currEntry.X-1 < len(lines[0]) {
+			currTimelines := runBeamRec(lines, aoc.Vec2d{X: currEntry.X - 1, Y: currEntry.Y}, cache)
+			(*cache)[aoc.Vec2d{X: currEntry.X - 1, Y: currEntry.Y}] = currTimelines
+			currTimelinesSum += currTimelines
+		}
+
+		(*cache)[currEntry] = currTimelinesSum + 1
+		return currTimelinesSum + 1
+	} else {
+		aoc.Assert(false, "Got unexpected entry in lines")
+	}
+	return (*cache)[currEntry]
+}
+
 func runBeam(lines []string, start aoc.Vec2d) int {
 	queue := []aoc.Vec2d{start}
-	splits := 0
+	splits := 1
 	visited := make(map[aoc.Vec2d]bool)
 
 	for len(queue) > 0 {
@@ -57,7 +95,8 @@ func handleLines(lines []string) int {
 		}
 	}
 
-	return runBeam(lines, start)
+	cache := make(map[aoc.Vec2d]int)
+	return runBeamRec(lines, start, &cache) + 1
 }
 
 func main() {
@@ -68,6 +107,6 @@ func main() {
 
 	fmt.Printf("Sum: %d\n", sum)
 	if selectExample {
-		aoc.Assert(sum == 21, "Example wrong!")
+		aoc.Assert(sum == 40, "Example wrong!")
 	}
 }
