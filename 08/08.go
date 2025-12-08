@@ -17,31 +17,6 @@ type VecsWithDist struct {
 	vec2 aoc.Vec3d
 }
 
-func minDist(boxes []aoc.Vec3d) VecsWithDist {
-	minimum := VecsWithDist{dist: boxes[0].Distance(boxes[1]), vec1: boxes[0], vec2: boxes[1]}
-	for iA, vecA := range boxes {
-		for _, vecB := range boxes[iA+1:] {
-			dist := vecA.Distance(vecB)
-			if dist < minimum.dist {
-				minimum.dist = dist
-				minimum.vec1 = vecA
-				minimum.vec2 = vecB
-			}
-		}
-	}
-	return minimum
-}
-
-func minDistMap(boxes map[aoc.Vec3d]bool) VecsWithDist {
-	boxesSlice := make([]aoc.Vec3d, 0)
-	for v, b := range boxes {
-		if b {
-			boxesSlice = append(boxesSlice, v)
-		}
-	}
-	return minDist(boxesSlice)
-}
-
 func getSortedPairs(boxes []aoc.Vec3d) []VecsWithDist {
 	pairs := make([]VecsWithDist, 0)
 
@@ -64,22 +39,15 @@ func (m VecIntMap) includes(v aoc.Vec3d) bool {
 }
 
 func getCircuitLen(boxes []aoc.Vec3d, limit int) int {
-	// boxesMap := make(map[aoc.Vec3d]bool)
-	// for _, box := range boxes {
-	// 	boxesMap[box] = true
-	// }
-
 	circuits := make(VecIntMap)
 
 	nextCircIndex := 1
 	circCount := 0
+	includedBoxes := 0
 
 	sortedDists := getSortedPairs(boxes)
-	for _, v := range sortedDists[:limit] {
-		fmt.Println(v)
-	}
 
-	for _, pair := range sortedDists[:limit] {
+	for _, pair := range sortedDists {
 		if circuits.includes(pair.vec1) && circuits.includes(pair.vec2) {
 			// merge the two circuits
 			circ1 := circuits[pair.vec1]
@@ -93,48 +61,30 @@ func getCircuitLen(boxes []aoc.Vec3d, limit int) int {
 				}
 			}
 			circCount--
-			continue
-		}
-		if circuits.includes(pair.vec1) {
+		} else if circuits.includes(pair.vec1) {
 			// does not include vec2
 			circuits[pair.vec2] = circuits[pair.vec1]
-			continue
-		}
-		if circuits.includes(pair.vec2) {
+			includedBoxes++
+		} else if circuits.includes(pair.vec2) {
 			// does not include vec1
 			circuits[pair.vec1] = circuits[pair.vec2]
-			continue
-		}
-
-		// new circuit!
-		circuits[pair.vec1] = nextCircIndex
-		circuits[pair.vec2] = nextCircIndex
-		nextCircIndex++
-		circCount++
-	}
-
-	circSizes := make(map[int]int)
-	actualCircuits := make([][]aoc.Vec3d, nextCircIndex)
-
-	for v, c := range circuits {
-		fmt.Printf("%v: %d\n", v, c)
-		if _, ok := circSizes[c]; ok {
-			circSizes[c]++
-			actualCircuits[c] = append(actualCircuits[c], v)
+			includedBoxes++
 		} else {
-			circSizes[c] = 1
-			actualCircuits[c] = []aoc.Vec3d{v}
+			// new circuit!
+			circuits[pair.vec1] = nextCircIndex
+			circuits[pair.vec2] = nextCircIndex
+			nextCircIndex++
+			circCount++
+			includedBoxes += 2
+		}
+
+		if includedBoxes == len(boxes) && circCount == 1 {
+			// all connected
+			return pair.vec1.X * pair.vec2.X
 		}
 	}
 
-	for c, cs := range actualCircuits {
-		fmt.Printf("Circ %d with size %d: %v\n", c, len(cs), cs)
-	}
-
-	slices.SortFunc(actualCircuits, func(a, b []aoc.Vec3d) int { return cmp.Compare(len(a), len(b)) })
-	slices.Reverse(actualCircuits)
-
-	return len(actualCircuits[0]) * len(actualCircuits[1]) * len(actualCircuits[2])
+	return -1
 }
 
 func handleLines(lines []string) int {
@@ -160,6 +110,8 @@ func main() {
 
 	fmt.Printf("Sum: %d\n", sum)
 	if selectExample {
-		aoc.Assert(sum == 40, "Example wrong!")
+		aoc.Assert(sum == 25272, "Example wrong!")
+	} else {
+		aoc.Assert(sum < 8537956038, "Too high!")
 	}
 }
