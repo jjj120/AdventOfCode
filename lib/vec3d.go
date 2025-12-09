@@ -6,6 +6,10 @@ type Vec3d struct {
 	X, Y, Z int
 }
 
+func (v Vec3d) Equals(v2 Vec3d) bool {
+	return v.X == v2.X && v.Y == v2.Y && v.Z == v2.Z
+}
+
 func (v Vec3d) Add(v2 Vec3d) Vec3d {
 	return Vec3d{v.X + v2.X, v.Y + v2.Y, v.Z + v2.Z}
 }

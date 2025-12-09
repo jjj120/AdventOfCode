@@ -6,6 +6,10 @@ type Vec2d struct {
 	X, Y int
 }
 
+func (v Vec2d) Equals(v2 Vec2d) bool {
+	return v.X == v2.X && v.Y == v2.Y
+}
+
 func (v Vec2d) Add(v2 Vec2d) Vec2d {
 	return Vec2d{v.X + v2.X, v.Y + v2.Y}
 }
