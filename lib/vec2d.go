@@ -35,7 +35,7 @@ func (v Vec2d) Cross(v2 Vec2d) int {
 }
 
 func (v Vec2d) Length() float64 {
-	return float64(v.X*v.X + v.Y*v.Y)
+	return math.Sqrt(float64(v.X*v.X + v.Y*v.Y))
 }
 
 func (v Vec2d) Normalize() Vec2d {
