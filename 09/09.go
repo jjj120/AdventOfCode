@@ -14,7 +14,7 @@ import (
 const day = 9
 const selectExample = false
 
-type Color int
+type Color int8
 
 const (
 	colWhite = iota
@@ -24,41 +24,14 @@ const (
 
 type TileColorMap map[aoc.Vec2d]Color
 
-func (m TileColorMap) Inside(p aoc.Vec2d) bool {
-	inside := false
-	c, ok := m[p]
-	y := p.Y
-
-	for x := range p.X {
-		pos := aoc.Vec2d{X: x, Y: y}
-		_, exists := m[pos]
-		_, exists_next := m[pos.Add(aoc.Vec2d{X: 1, Y: 0})]
-
-		if exists && !exists_next {
-			inside = !inside
-		}
-	}
-	return inside || (ok && c != colWhite)
-}
-
-func (m TileColorMap) Outside(p aoc.Vec2d) bool {
-	return !m.Inside(p)
-}
-
-func printTileMap(tiles TileColorMap, width int, height int) {
+func printTileSlice(tiles [][]Color) {
 	if !selectExample {
 		return
 	}
 
-	for y := range height {
-		for x := range width {
-			pos := aoc.Vec2d{X: x, Y: y}
-
-			v, ok := tiles[pos]
-
-			if !ok {
-				fmt.Print(aoc.UNICODE_BLOCK)
-			} else if v == colRed {
+	for _, line := range tiles {
+		for _, v := range line {
+			if v == colRed {
 				aoc.ColorPrint(aoc.ConstantToAnsiEscapeString(aoc.ANSI_BRIGHT_RED_FG), aoc.UNICODE_BLOCK)
 			} else if v == colGreen {
 				aoc.ColorPrint(aoc.ConstantToAnsiEscapeString(aoc.ANSI_BRIGHT_GREEN_FG), aoc.UNICODE_BLOCK)
@@ -70,10 +43,19 @@ func printTileMap(tiles TileColorMap, width int, height int) {
 	}
 }
 
-func drawTileMap(tiles TileColorMap, width, height int) {
+func drawTileSlice(tiles [][]Color) {
 	fmt.Println("Start drawing tilemap                                  ")
-	const downscaleFactor = 64
-	baseImage := image.NewRGBA(image.Rect(0, 0, width/downscaleFactor+1, height/downscaleFactor+1))
+	width := len(tiles[0])
+	height := len(tiles)
+
+	const downscaleFactor = 128
+
+	if width <= downscaleFactor || height <= downscaleFactor {
+		fmt.Println("Image not printed, image smaller than downscale factor")
+		return
+	}
+
+	baseImage := image.NewRGBA(image.Rect(0, 0, width/downscaleFactor, height/downscaleFactor))
 
 	for y := range height / downscaleFactor {
 		fmt.Printf("Drawing line %d/%d         \r", y, height/downscaleFactor)
@@ -83,17 +65,12 @@ func drawTileMap(tiles TileColorMap, width, height int) {
 			hasGreen := false
 			for xOff := range downscaleFactor {
 				for yOff := range downscaleFactor {
-					pos := aoc.Vec2d{X: x*downscaleFactor + xOff, Y: y*downscaleFactor + yOff}
-
-					v, ok := tiles[pos]
-					if ok && v == colRed {
-						hasRed = true
-					}
-					if ok && v == colGreen {
-						hasGreen = true
-					}
+					color := tiles[y*downscaleFactor+yOff][x*downscaleFactor+xOff]
+					hasRed = hasRed || (color == colRed)
+					hasGreen = hasGreen || (color == colGreen)
 				}
 			}
+
 			if hasRed {
 				baseImage.SetRGBA(x, y, color.RGBA{R: 255, G: 0, B: 0, A: 255})
 			} else if hasGreen {
@@ -104,7 +81,7 @@ func drawTileMap(tiles TileColorMap, width, height int) {
 		}
 	}
 
-	file, err := os.Create("output.png")
+	file, err := os.Create(fmt.Sprintf("output_%d.png", downscaleFactor))
 	if err != nil {
 		log.Fatalf("Error creating file: %v", err)
 	}
@@ -116,14 +93,56 @@ func drawTileMap(tiles TileColorMap, width, height int) {
 	fmt.Println("Finished drawing tilemap")
 }
 
-func makeTileMap(tiles []aoc.Vec2d, width, height int) TileColorMap {
+func makeTileSlice(colorMap TileColorMap, width, height int) [][]Color {
+	tileMap := make([][]Color, 0, height+2)
+	for len(tileMap) < height+2 {
+		tileMap = append(tileMap, make([]Color, width+2))
+	}
+	for tile, color := range colorMap {
+		tileMap[tile.Y][tile.X] = color
+	}
+
+	fmt.Println("Start filling inside                                        ")
+	fmt.Println(width, height, len(tileMap[0]), len(tileMap))
+
+	// color inside green
+	for y := range height {
+		fmt.Printf("Filling line %d of %d     \r", y, width)
+		outside := true
+		for x := range width - 1 {
+			col := tileMap[y][x]
+			nextCol := tileMap[y][x+1]
+
+			colValid := col == colRed || col == colGreen
+			nextColValid := nextCol == colRed || nextCol == colGreen
+
+			if colValid && !nextColValid {
+				outside = !outside
+			}
+			if !colValid {
+				tileMap[y][x] = colWhite
+			}
+			if !outside && !colValid {
+				tileMap[y][x] = colGreen
+			}
+		}
+	}
+	fmt.Printf("                                                              \r")
+
+	return tileMap
+}
+
+func makeTileMap(tiles []aoc.Vec2d) (TileColorMap, map[aoc.Vec2d]bool) {
 	fmt.Printf("Start making tilemap")
 
 	colorMap := make(TileColorMap)
+	mapRed := make(map[aoc.Vec2d]bool)
 	prevTile := tiles[0]
 
 	// color edges
 	for _, tile := range tiles[1:] {
+		mapRed[tile] = true
+
 		dir := tile.Sub(prevTile)
 		// fmt.Printf("%v with len %f (%d) and norm %v\n", dir, dir.Length(), int(dir.Length()), dir.Normalize())
 		dir = dir.Normalize()
@@ -150,39 +169,53 @@ func makeTileMap(tiles []aoc.Vec2d, width, height int) TileColorMap {
 	}
 	colorMap[tiles[0]] = colRed
 
-	return colorMap
+	return colorMap, mapRed
 }
 
-func getBiggestRect(tiles TileColorMap) int {
+func getBiggestRect(tiles [][]Color, corners map[aoc.Vec2d]bool) int {
 	fmt.Println("Start checking rects                             ")
 
 	maxSize := 0
 	maxSizeP1 := aoc.Vec2d{X: 0, Y: 0}
 	maxSizeP2 := aoc.Vec2d{X: 0, Y: 0}
-	for p1, c1 := range tiles {
-		if c1 != colRed {
-			continue
-		}
-		for p2, c2 := range tiles {
-			if c2 != colRed {
-				continue
-			}
+	for p1, _ := range corners {
+		for p2, _ := range corners {
 			if p1.Equals(p2) {
 				continue
 			}
+
 			fmt.Printf("Checking %v-%v              \r", p1, p2)
 
 			isValid := true
+			// check edges: vertical edges
 			for y := min(p1.Y, p2.Y); y <= max(p1.Y, p2.Y) && isValid; y++ {
-				for x := min(p1.X, p2.X); x <= max(p1.X, p2.X) && isValid; x++ {
-					fmt.Printf("Checking %v-%v at %d,%d                        \r", p1, p2, x, y)
+				tileColor := tiles[y][p1.X]
+				if tileColor != colRed && tileColor != colGreen {
+					isValid = false
+					break
+				}
 
-					if tiles.Outside(aoc.Vec2d{X: x, Y: y}) {
-						isValid = false
-						break
-					}
+				tileColor = tiles[y][p2.X]
+				if tileColor != colRed && tileColor != colGreen {
+					isValid = false
+					break
 				}
 			}
+
+			for x := min(p1.X, p2.X); x <= max(p1.X, p2.X) && isValid; x++ {
+				tileColor := tiles[p1.Y][x]
+				if tileColor != colRed && tileColor != colGreen {
+					isValid = false
+					break
+				}
+
+				tileColor = tiles[p2.Y][x]
+				if tileColor != colRed && tileColor != colGreen {
+					isValid = false
+					break
+				}
+			}
+
 			if !isValid {
 				continue
 			}
@@ -221,11 +254,12 @@ func handleLines(lines []string) int {
 	}
 	fmt.Printf("X: min: %d, max: %d\n", minX, maxX)
 	fmt.Printf("Y: min: %d, max: %d\n", minY, maxY)
-	tileMap := makeTileMap(tiles, maxX+1, maxY+1)
-	printTileMap(tileMap, maxX+2, maxY+2)
-	drawTileMap(tileMap, maxX+2, maxY+2)
+	tileMap, tileMapRed := makeTileMap(tiles)
+	tileSlice := makeTileSlice(tileMap, maxX+1, maxY+1)
+	printTileSlice(tileSlice)
+	drawTileSlice(tileSlice)
 
-	return getBiggestRect(tileMap)
+	return getBiggestRect(tileSlice, tileMapRed)
 }
 
 func main() {
