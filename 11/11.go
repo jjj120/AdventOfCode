@@ -10,15 +10,32 @@ import (
 const day = 11
 const selectExample = false
 
-func countPaths(devices map[string][]string, from, to string) int {
+type CacheKey struct {
+	from, to         string
+	vis_dac, vis_fft bool
+}
+
+func countPaths(devices map[string][]string, from, to string, vis_dac, vis_fft bool, cache *map[CacheKey]int) int {
 	sum := 0
+	if from == "dac" {
+		vis_dac = true
+	}
+	if from == "fft" {
+		vis_fft = true
+	}
+	if v, ok := (*cache)[CacheKey{from: from, to: to, vis_dac: vis_dac, vis_fft: vis_fft}]; ok {
+		return v
+	}
 	for _, d := range devices[from] {
 		if d == to {
-			sum++
+			if vis_dac && vis_fft {
+				sum++
+			}
 		} else {
-			sum += countPaths(devices, d, to)
+			sum += countPaths(devices, d, to, vis_dac, vis_fft, cache)
 		}
 	}
+	(*cache)[CacheKey{from: from, to: to, vis_dac: vis_dac, vis_fft: vis_fft}] = sum
 	return sum
 }
 
@@ -31,7 +48,8 @@ func handleLines(lines []string) int {
 		devices[deviceName] = splitLine
 	}
 
-	return countPaths(devices, "you", "out")
+	cache := make(map[CacheKey]int)
+	return countPaths(devices, "svr", "out", false, false, &cache)
 }
 
 func main() {
@@ -42,6 +60,6 @@ func main() {
 
 	fmt.Printf("Sum: %d\n", sum)
 	if selectExample {
-		aoc.Assert(sum == 5, "Example wrong!")
+		aoc.Assert(sum == 2, "Example wrong!")
 	}
 }
