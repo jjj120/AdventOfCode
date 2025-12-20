@@ -2,6 +2,8 @@ package main
 
 import (
 	"fmt"
+	"os"
+	"os/exec"
 	"strconv"
 	"strings"
 
@@ -98,6 +100,104 @@ func checkCombinations(m Machine, btnsToUse int) bool {
 	return helper(0)
 }
 
+func run_z3(filename string) int {
+	cmd := exec.Command("z3", filename)
+
+	out, err := cmd.Output()
+	aoc.Check(err)
+
+	output := string(out)
+	outputSplit := strings.Split(output, "\n")
+
+	if outputSplit[0] != "sat" {
+		panic("File not sat!")
+	}
+
+	outputSplit = outputSplit[2 : len(outputSplit)-2]
+
+	parsedSols := make(map[string]int)
+
+	for i := range len(outputSplit) / 2 {
+		line1 := strings.TrimSpace(outputSplit[2*i])
+		line2 := strings.TrimSpace(outputSplit[2*i+1])
+
+		varName := ""
+		fmt.Sscanf(line1, "(define-fun %s () Int", &varName)
+
+		// remove all chars that are not part of the number
+		line2 = strings.ReplaceAll(line2, "(", "")
+		line2 = strings.ReplaceAll(line2, ")", "")
+		line2 = strings.ReplaceAll(line2, " ", "")
+
+		num, err := strconv.Atoi(line2)
+		aoc.Check(err)
+
+		parsedSols[varName] = num
+	}
+
+	sum := 0
+	for varName, num := range parsedSols {
+		if selectExample {
+			fmt.Printf("%s: %d\n", varName, num)
+		}
+		sum += num
+	}
+
+	return sum
+}
+
+func solveJolts(m Machine) int {
+	const z3FileName = ".z3.tmp"
+	z3File, err := os.Create(z3FileName)
+	if err != nil {
+		fmt.Println("Error opening file:", err)
+		return 0
+	}
+	defer z3File.Close()
+
+	for i, _ := range m.Buttons {
+		// (declare-const x Int)
+		z3File.WriteString(fmt.Sprintf("(declare-const b%d Int)\n", i))
+	}
+
+	for eqi, jolt := range m.Jolts {
+		// eq := fmt.Sprintf("(assert (= (%d) ", jolt)
+		eq := ""
+
+		for btni, btn := range m.Buttons {
+			if (int(btn)>>eqi)&1 == 1 {
+				// button is pressed here
+				eq = fmt.Sprintf("(+ b%d %s)", btni, eq)
+			}
+		}
+		// _, err := z3File.WriteString(fmt.Sprintf("%d = ", jolt) + eq[2:] + "\n")
+		_, err := z3File.WriteString(fmt.Sprintf("(assert (= %d ", jolt) + eq + "))\n")
+		aoc.Check(err)
+	}
+
+	min_eq := ""
+	for btni := range m.Buttons {
+		min_eq = fmt.Sprintf("(+ b%d %s)", btni, min_eq)
+		_, err := z3File.WriteString(fmt.Sprintf("(assert (>= b%d 0))\n", btni))
+		aoc.Check(err)
+	}
+
+	z3File.WriteString("(minimize " + min_eq + ")\n")
+	z3File.WriteString("(check-sat)\n")
+	z3File.WriteString("(get-model)\n")
+
+	z3File.Sync()
+
+	sol := run_z3(z3FileName)
+
+	if selectExample {
+		fmt.Println(sol)
+		fmt.Println()
+	}
+
+	return sol
+}
+
 func handleLines(lines []string) int {
 	machines := make([]Machine, 0, len(lines))
 	for _, line := range lines {
@@ -138,20 +238,16 @@ func handleLines(lines []string) int {
 	}
 
 	if selectExample {
-		aoc.Assert(machines[0].PressAll([]int{0, 1, 2}) == true, "PressAll not correct")
-		machines[0].Reset()
+		fmt.Println("Start solving Z3")
 	}
 
 	sum := 0
-	for _, m := range machines {
-		m.Print()
-		l := 1
-		for !checkCombinations(m, l) {
-			l++
-		}
-		sum += l
-		fmt.Println("                                                 ")
+	for i, m := range machines {
+		fmt.Printf("Start checking machine %d/%d                  \r", i, len(machines))
+		sum += solveJolts(m)
 	}
+
+	fmt.Printf("                                                                                                        \r")
 
 	return sum
 }
@@ -160,10 +256,12 @@ func main() {
 	lines, err := aoc.ParseInput(day, selectExample)
 	aoc.Check(err)
 
+	fmt.Println("Starting")
+
 	sum := handleLines(lines)
 
 	fmt.Printf("Sum: %d\n", sum)
 	if selectExample {
-		aoc.Assert(sum == 7, "Example wrong!")
+		aoc.Assert(sum == 33, "Example wrong!")
 	}
 }
