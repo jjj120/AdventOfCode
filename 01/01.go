@@ -23,8 +23,16 @@ type PosHeading struct {
 	heading aoc.Vec2d
 }
 
-func (ph *PosHeading) WalkStraight(len int) {
-	ph.pos = ph.pos.Add(ph.heading.MulScalar(len))
+func (ph *PosHeading) WalkStraight(m *map[aoc.Vec2d]bool, len int) bool {
+	for range len {
+		ph.pos = ph.pos.Add(ph.heading)
+
+		if included, ok := (*m)[ph.pos]; included && ok {
+			return true
+		}
+		(*m)[ph.pos] = true
+	}
+	return false
 }
 
 func (ph *PosHeading) TurnRight() {
@@ -35,11 +43,7 @@ func (ph *PosHeading) TurnLeft() {
 	ph.heading = ph.heading.Rotate270()
 }
 
-func (ph *PosHeading) Walk(instr string) {
-	if len(instr) < 2 {
-		return
-	}
-
+func (ph *PosHeading) Walk(m *map[aoc.Vec2d]bool, instr string) bool {
 	dir := string(instr[0])
 	len, err := strconv.Atoi(string(instr[1:]))
 	aoc.Check(err)
@@ -52,16 +56,19 @@ func (ph *PosHeading) Walk(instr string) {
 		aoc.Assert(false, "Got unknown heading!")
 	}
 
-	ph.WalkStraight(len)
+	return ph.WalkStraight(m, len)
 }
 
 func handleLines(lines []string) int {
 	ph := PosHeading{pos: aoc.Vec2d{X: 0, Y: 0}, heading: aoc.Vec2d{X: 0, Y: -1}}
+	visited := make(map[aoc.Vec2d]bool)
 
 	for _, line := range lines {
 		for _, dir := range strings.Split(line, ", ") {
 			// fmt.Println(dir)
-			ph.Walk(dir)
+			if ph.Walk(&visited, dir) {
+				break
+			}
 			// fmt.Println(ph)
 		}
 	}
@@ -77,6 +84,6 @@ func main() {
 
 	fmt.Printf("Sum: %d\n", sum)
 	if selectExample {
-		aoc.Assert(sum == 12, "Example wrong!")
+		aoc.Assert(sum == 4, "Example wrong!")
 	}
 }
