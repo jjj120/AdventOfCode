@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"math"
 
 	aoc "github.com/jjj120/AdventOfCode/lib"
 )
@@ -10,24 +9,34 @@ import (
 const day = 02
 const selectExample = false
 
-const WIDTH_X = 3
-const WIDTH_Y = 3
+var validPos = map[aoc.Vec2d]string{
+	{X: 2, Y: 0}: "1",
+	{X: 1, Y: 1}: "2",
+	{X: 2, Y: 1}: "3",
+	{X: 3, Y: 1}: "4",
+	{X: 0, Y: 2}: "5",
+	{X: 1, Y: 2}: "6",
+	{X: 2, Y: 2}: "7",
+	{X: 3, Y: 2}: "8",
+	{X: 4, Y: 2}: "9",
+	{X: 1, Y: 3}: "A",
+	{X: 2, Y: 3}: "B",
+	{X: 3, Y: 3}: "C",
+	{X: 2, Y: 4}: "D",
+}
 
 func Step(v, s aoc.Vec2d) aoc.Vec2d {
 	v_new := v.Add(s)
-	if v_new.X >= WIDTH_X || v_new.Y >= WIDTH_Y || v_new.X < 0 || v_new.Y < 0 {
-		return v
+
+	if _, ok := validPos[v_new]; ok {
+		return v_new
 	}
-	return v_new
+	return v
 }
 
-func VecToInt(v aoc.Vec2d) int {
-	return 1 + v.X + v.Y*WIDTH_X
-}
-
-func handleLines(lines []string) int {
-	pos := aoc.Vec2d{X: 1, Y: 1}
-	code := make([]int, 0, len(lines))
+func handleLines(lines []string) string {
+	pos := aoc.Vec2d{X: 0, Y: 2}
+	code := ""
 	for _, line := range lines {
 		for _, r := range line {
 			switch r {
@@ -43,13 +52,9 @@ func handleLines(lines []string) int {
 			}
 		}
 
-		code = append(code, VecToInt(pos))
+		code += validPos[pos]
 	}
-	sum := 0
-	for i, num := range code {
-		sum += int(float64(math.Pow10(len(code)-i-1))) * num
-	}
-	return sum
+	return code
 }
 
 func main() {
@@ -58,8 +63,8 @@ func main() {
 
 	sum := handleLines(lines)
 
-	fmt.Printf("Sum: %d\n", sum)
+	fmt.Printf("Sum: %s\n", sum)
 	if selectExample {
-		aoc.Assert(sum == 1985, "Example wrong!")
+		aoc.Assert(sum == "5DB3", "Example wrong!")
 	}
 }
