@@ -17,7 +17,9 @@ func checkTriangle(l1, l2, l3 int) bool {
 
 func handleLines(lines []string) int {
 	counter := 0
-	for _, line := range lines {
+	prev_0 := []int{0}
+	prev_1 := []int{0}
+	for i, line := range lines {
 		s := strings.Split(line, " ")
 		nums := make([]int, 0, 3)
 		for i, n := range s {
@@ -28,9 +30,21 @@ func handleLines(lines []string) int {
 				nums = append(nums, num)
 			}
 		}
-		// fmt.Println(nums)
-		if checkTriangle(nums[0], nums[1], nums[2]) {
-			counter += 1
+
+		if i%3 == 0 {
+			prev_0 = nums
+		} else if i%3 == 1 {
+			prev_1 = nums
+		} else {
+			if checkTriangle(prev_0[0], prev_1[0], nums[0]) {
+				counter += 1
+			}
+			if checkTriangle(prev_0[1], prev_1[1], nums[1]) {
+				counter += 1
+			}
+			if checkTriangle(prev_0[2], prev_1[2], nums[2]) {
+				counter += 1
+			}
 		}
 	}
 	return counter
@@ -44,6 +58,6 @@ func main() {
 
 	fmt.Printf("Sum: %d\n", sum)
 	if selectExample {
-		aoc.Assert(sum == 1, "Example wrong!")
+		aoc.Assert(sum == 6, "Example wrong!")
 	}
 }
