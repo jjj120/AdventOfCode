@@ -6,7 +6,7 @@ wait=false
 
 # Function to print usage
 usage() {
-    echo "Usage: $0 [-d|--day] <day>"
+    echo "Usage: $0 [-d|--day] <day> [-y|--year] <year> [-w|--wait] [-h|--help]"
     exit 1
 }
 
@@ -15,7 +15,7 @@ while [[ $# -gt 0 ]]; do
     case $1 in
         -d|--day)
             if [[ -n $2 ]]; then
-                day="$2"
+                today="$2"
                 shift 2
             else
                 echo "Error: Argument for $1 is missing" >&2
@@ -81,6 +81,12 @@ sed -i "s/const day = 0/const day = $today/g" ./$today/$today.go
 if [ "$wait" = true ]; then
     echo "Waiting for the input file to be available..."
     aocdl -output "$today/{{printf \"%02d\" .Day}}.in" -wait
+    if [ $? != 0 ]; then
+        echo "Download failed!"
+    fi
 else
     aocdl -output "$today/{{printf \"%02d\" .Day}}.in" -day $today -year $year
+    if [ $? != 0 ]; then
+        echo "Download failed!"
+    fi
 fi
