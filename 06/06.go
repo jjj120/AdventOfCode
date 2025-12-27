@@ -26,15 +26,15 @@ func handleLines(lines []string) string {
 
 	sol := ""
 	for _, m := range maps {
-		maxChar := 'a'
-		maxNum := 0
+		minChar := 'a'
+		minNum := 1000000
 		for k, v := range m {
-			if maxNum < v {
-				maxNum = v
-				maxChar = k
+			if minNum > v && v != 0 {
+				minNum = v
+				minChar = k
 			}
 		}
-		sol += string(maxChar)
+		sol += string(minChar)
 	}
 
 	return sol
@@ -48,6 +48,6 @@ func main() {
 
 	fmt.Printf("Sum: %s\n", sum)
 	if selectExample {
-		aoc.Assert(sum == "easter", "Example wrong!")
+		aoc.Assert(sum == "advent", "Example wrong!")
 	}
 }
