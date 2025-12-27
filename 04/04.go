@@ -5,6 +5,7 @@ import (
 	"regexp"
 	"sort"
 	"strconv"
+	"strings"
 
 	aoc "github.com/jjj120/AdventOfCode/lib"
 )
@@ -24,6 +25,23 @@ func parseRoom(l string) Room {
 	num, err := strconv.Atoi(parsed[2])
 	aoc.Check(err)
 	return Room{name: parsed[1], sectorID: num, checksum: parsed[3]}
+}
+
+func shiftRune(r rune, a int) rune {
+	return (rune(int(r-'a')+a)%26 + 'a')
+}
+
+func decryptName(r Room) string {
+	name := ""
+
+	for _, ru := range strings.ReplaceAll(r.name, "-", " ") {
+		if ru == ' ' {
+			name += " "
+			continue
+		}
+		name += string(shiftRune(ru, r.sectorID))
+	}
+	return name
 }
 
 func checkRoom(r Room) int {
@@ -62,7 +80,14 @@ func checkRoom(r Room) int {
 		}
 	}
 
-	return r.sectorID
+	decName := decryptName(r)
+
+	if strings.Contains(decName, "north") {
+		fmt.Printf("Found match: %s\n", decName)
+		return r.sectorID
+	}
+
+	return 0
 }
 
 func handleLines(lines []string) int {
